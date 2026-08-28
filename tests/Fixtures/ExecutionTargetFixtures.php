@@ -14,10 +14,10 @@ use Sifrious\Logres\TaskId;
 
 final class ExecutionTargetFixtures
 {
-    public static function requirements(array $capabilities = ['git', 'php']): ExecutionTargetRequirements
+    public static function requirements(array $capabilities = ['git', 'php'], ?TaskId $taskId = null): ExecutionTargetRequirements
     {
         return new ExecutionTargetRequirements(
-            taskId: new TaskId('task:accepted-fixture:inspect'),
+            taskId: $taskId ?? new TaskId('task:accepted-fixture:inspect'),
             provider: 'orbs',
             workspaceAuthority: 'workspace:personal',
             repositoryIdentity: 'repository:atlas',

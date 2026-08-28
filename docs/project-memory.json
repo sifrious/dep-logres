@@ -1,21 +1,23 @@
 {
     "schema_version": 1,
     "project": "Logres",
-    "updated_at": "2026-08-28T05:18:00Z",
+    "updated_at": "2026-08-28T05:55:00Z",
     "facts": [
         {"id": "F-001", "statement": "Logres is a framework-neutral execution-kernel package with PHP as its only runtime dependency."},
         {"id": "F-002", "statement": "ExecutionRequest identity is supplied before persistence and asynchronous execution."},
         {"id": "F-003", "statement": "Task plans contain canonical Logres task identities and package-computed dependency readiness."},
         {"id": "F-004", "statement": "The deterministic planner produces two parallel discovery tasks followed by blocked implementation and verification tasks."},
         {"id": "F-005", "statement": "TaskPrompt compilation freezes canonical JSON bytes containing the complete declared execution envelope and identifies them with SHA-256 hashes."},
-        {"id": "F-006", "statement": "Execution target selection produces an immutable snapshot from provider observations and explicit task requirements before dispatch."}
+        {"id": "F-006", "statement": "Execution target selection produces an immutable snapshot from provider observations and explicit task requirements before dispatch."},
+        {"id": "F-007", "statement": "A local Run identity and immutable request, task, prompt, target, policy, and actor provenance exist before provider dispatch."}
     ],
     "assumptions": [
         {"id": "A-001", "statement": "Version-one attachment references use artifact: and upload: namespaces supplied by host adapters."},
         {"id": "A-002", "statement": "A deliberately skipped dependency is satisfied, while a canceled or failed dependency continues to block downstream work."},
         {"id": "A-003", "statement": "Codex is the initial agent label until target selection demonstrates a need for another planner policy."},
         {"id": "A-004", "statement": "Version-one project instructions can be resolved by the consuming host from its current Programming Manifesto and repository guidance."},
-        {"id": "A-005", "statement": "A provider adapter can eventually supply stable Orb identity, availability, health, runtime, workspace, repository, adapter, capability, current-task, and observation facts without Logres holding provider credentials."}
+        {"id": "A-005", "statement": "A provider adapter can eventually supply stable Orb identity, availability, health, runtime, workspace, repository, adapter, capability, current-task, and observation facts without Logres holding provider credentials."},
+        {"id": "A-006", "statement": "A provider lookup adapter can reconcile a lost acknowledgement using the immutable local Run provenance without exposing credentials to Logres."}
     ],
     "decisions": [
         {"id": "D-001", "decision": "Corrections and child requests are new immutable requests with parent lineage.", "rationale": "Original caller intent must remain inspectable."},
@@ -25,7 +27,9 @@
         {"id": "D-005", "decision": "Task prompt version identity advances only when declared input or compiler identity changes.", "rationale": "Repeated compilation must be idempotent while any execution-affecting change remains visible in immutable lineage."},
         {"id": "D-006", "decision": "The compiled prompt is a stable heading followed by canonical JSON.", "rationale": "The first format is directly inspectable, deterministic, and requires no template engine or provider-specific syntax."},
         {"id": "D-007", "decision": "Automatic target selection succeeds only when exactly one explicitly authorized, operational, capable target matches the task context.", "rationale": "Dispatch must not conceal ambiguity or rely on ambient authority."},
-        {"id": "D-008", "decision": "Manual target overrides pass through the same eligibility and authorization policy as automatic selection.", "rationale": "An override chooses among valid targets; it does not bypass safety or task requirements."}
+        {"id": "D-008", "decision": "Manual target overrides pass through the same eligibility and authorization policy as automatic selection.", "rationale": "An override chooses among valid targets; it does not bypass safety or task requirements."},
+        {"id": "D-009", "decision": "The local Run identity is created before network dispatch and remains authoritative after provider acknowledgement.", "rationale": "Network uncertainty must not create or replace the logical execution identity."},
+        {"id": "D-010", "decision": "Provider identity binding is idempotent for an exact duplicate and conflicting for any different or cross-Run identity.", "rationale": "The first verified binding must remain stable and auditable."}
     ],
     "constraints": [
         "Logres does not depend on Laravel, Eloquent, HTTP, queues, Blade, or a concrete process.",
@@ -33,14 +37,16 @@
         "Automatic starts require package readiness and explicit start authority.",
         "Controllers and form requests may map failures but may not redefine package validation.",
         "Task prompt compilation cannot read host files, resolve credentials, or select execution providers.",
-        "Execution target selection cannot discover provider state, resolve credentials, persist host records, or dispatch work."
+        "Execution target selection cannot discover provider state, resolve credentials, persist host records, or dispatch work.",
+        "Run identity policy cannot perform provider lookup, hold credentials, or choose storage transaction mechanics."
     ],
     "open_questions": [
         {"id": "Q-001", "question": "Which later ticket introduces attachment media metadata beyond a stable reference and display name?"},
         {"id": "Q-002", "question": "Which planning provider should replace or supplement the deterministic planner when request-specific decomposition is required?"},
         {"id": "Q-003", "question": "Which authorization policy grants automatic start authority in each host?"},
         {"id": "Q-004", "question": "Which later execution ticket marks a frozen TaskPrompt version as dispatched and records provider receipt?"},
-        {"id": "Q-005", "question": "Which authenticated Amp surface can provide stable Orb inventory, availability, health, runtime, workspace, repository, capabilities, and current-task observations?"}
+        {"id": "Q-005", "question": "Which authenticated Amp surface can provide stable Orb inventory, availability, health, runtime, workspace, repository, capabilities, and current-task observations?"},
+        {"id": "Q-006", "question": "Which provider correlation fields can an Amp adapter use to reconcile a lost acknowledgement without creating a second execution?"}
     ],
     "glossary": [
         {"term": "ExecutionRequest", "definition": "The immutable original request, target context, desired result, permissions, constraints, requester, delivery channel, attachments, and lineage."},
@@ -52,24 +58,29 @@
         {"term": "TaskPrompt", "definition": "A frozen, versioned execution envelope compiled for one canonical task from explicitly declared inputs."},
         {"term": "Provenance hash", "definition": "The SHA-256 identity of the compiler, canonical input identity, and exact compiled prompt bytes."},
         {"term": "Execution target", "definition": "A concrete provider-qualified environment eligible to execute one canonical task."},
-        {"term": "Target snapshot", "definition": "The immutable provider facts, task requirements, selection reason, alternatives, and timestamp persisted before dispatch."}
+        {"term": "Target snapshot", "definition": "The immutable provider facts, task requirements, selection reason, alternatives, and timestamp persisted before dispatch."},
+        {"term": "Run", "definition": "The stable local identity for one logical execution, created before remote dispatch."},
+        {"term": "Provider binding", "definition": "The immutable association between one local Run and the first verified provider execution identity."}
     ],
     "features": [
         {"id": "MME-5", "name": "ExecutionRequest", "stage": "MVP", "status": "implemented"},
         {"id": "MME-6", "name": "Translated task plans", "stage": "MVP", "status": "implemented"},
         {"id": "MME-7", "name": "Immutable per-task prompts", "stage": "MVP", "status": "implemented"},
-        {"id": "MME-8", "name": "Explicit execution target selection", "stage": "MVP", "status": "package_implemented_host_integration_pending"}
+        {"id": "MME-8", "name": "Explicit execution target selection", "stage": "MVP", "status": "package_implemented_host_integration_pending"},
+        {"id": "MME-1553", "name": "Stable Run identity and provider acknowledgement", "stage": "MVP", "status": "package_implemented_host_integration_pending"}
     ],
     "workflows": [
         {"id": "W-001", "name": "Submit execution request", "states": ["mapped", "validated", "rejected_or_persisting", "accepted_or_persistence_failed"]},
         {"id": "W-002", "name": "Execute translated task", "states": ["planned_ready_or_blocked", "running", "waiting_or_failed", "retried_or_replanned", "succeeded_skipped_or_canceled"]},
         {"id": "W-003", "name": "Compile task prompt", "states": ["inputs_resolved", "canonicalized", "existing_version_returned_or_new_version_frozen", "persisted", "disclosed"]},
-        {"id": "W-004", "name": "Select execution target", "states": ["requirements_declared", "provider_facts_observed", "filtered_by_context_capability_health_and_authority", "selected_or_rejected", "persisted_before_dispatch"]}
+        {"id": "W-004", "name": "Select execution target", "states": ["requirements_declared", "provider_facts_observed", "filtered_by_context_capability_health_and_authority", "selected_or_rejected", "persisted_before_dispatch"]},
+        {"id": "W-005", "name": "Bind provider execution identity", "states": ["not_dispatched", "awaiting_acknowledgement", "acknowledged_or_acknowledgement_uncertain", "conflicting_acknowledgement_or_reconciliation_required", "acknowledged"]}
     ],
     "content_opportunities": [
         {"id": "C-001", "format": "post", "user_problem": "Corrections overwrite the request that explains why work began.", "concept": "Model corrections as immutable lineage before asynchronous execution starts.", "technology": "PHP value objects and ports", "project_context": "Logres ExecutionRequest", "audience": "intermediate application developers", "hook": "A corrected request is new evidence, not an edit to old evidence."},
         {"id": "C-002", "format": "short video", "user_problem": "Queue and UI code quietly disagree about which task can run next.", "concept": "Project readiness and allowed actions from one immutable dependency graph.", "technology": "PHP enums, value objects, directed acyclic graphs", "project_context": "Logres MME-6", "audience": "intermediate application developers", "hook": "If three screens compute ready, you have three schedulers."},
         {"id": "C-003", "format": "post", "user_problem": "Teams cannot reconstruct which prompt an agent actually executed.", "concept": "Freeze the complete execution envelope before dispatch and version every declared input change.", "technology": "Canonical JSON and SHA-256 in PHP", "project_context": "Logres MME-7", "audience": "intermediate agent-platform developers", "hook": "An agent run is not reproducible if its prompt is assembled after you ask what happened."},
-        {"id": "C-004", "format": "short video", "user_problem": "A scheduler says it chose a machine but cannot explain why or whether it was authorized.", "concept": "Treat target selection as a deterministic domain decision over factual provider observations.", "technology": "PHP value objects, enums, and ports", "project_context": "Logres MME-8", "audience": "intermediate agent-platform developers", "hook": "A target ID without the facts behind the choice is not an audit trail."}
+        {"id": "C-004", "format": "short video", "user_problem": "A scheduler says it chose a machine but cannot explain why or whether it was authorized.", "concept": "Treat target selection as a deterministic domain decision over factual provider observations.", "technology": "PHP value objects, enums, and ports", "project_context": "Logres MME-8", "audience": "intermediate agent-platform developers", "hook": "A target ID without the facts behind the choice is not an audit trail."},
+        {"id": "C-005", "format": "post", "user_problem": "A lost dispatch response causes a scheduler to create a second remote execution.", "concept": "Create local identity first and reconcile provider acknowledgement without changing the logical Run.", "technology": "PHP state models and persistence ports", "project_context": "Logres MME-1553", "audience": "intermediate agent-platform developers", "hook": "A timeout is uncertainty, not permission to mint another execution."}
     ]
 }
