@@ -5,12 +5,18 @@ declare(strict_types=1);
 namespace Sifrious\Logres\Tests\Fixtures;
 
 use Sifrious\Logres\ExecutionTargetSelector;
+use Sifrious\Logres\DispatchAuthorizationPolicy;
+use Sifrious\Logres\ExecutionGrant;
+use Sifrious\Logres\ExecutionTargetId;
 use Sifrious\Logres\ProviderAcknowledgement;
 use Sifrious\Logres\ProviderExecutionId;
 use Sifrious\Logres\Run;
 use Sifrious\Logres\RunId;
 use Sifrious\Logres\RunProvenance;
+use Sifrious\Logres\RepositoryIdentity;
 use Sifrious\Logres\TaskPromptCompiler;
+use Sifrious\Logres\WorkspaceAuthority;
+use Sifrious\Logres\WorkspacePath;
 
 final class RunIdentityFixtures
 {
@@ -22,11 +28,26 @@ final class RunIdentityFixtures
 
     public static function run(string $id = 'fixture-001'): Run
     {
+        $run = self::unauthorizedRun($id);
+        $decision = (new DispatchAuthorizationPolicy)->authorize(
+            $run,
+            self::grant(),
+            WorkspacePath::fromInput('/workspace/atlas'),
+            [new RepositoryIdentity('repository:atlas')],
+            'production',
+            self::CREATED_AT,
+        );
+
+        return $run->authorized($decision);
+    }
+
+    public static function unauthorizedRun(string $id = 'fixture-001'): Run
+    {
         $prompt = (new TaskPromptCompiler)->compile(TaskPromptFixtures::input());
         $requirements = ExecutionTargetFixtures::requirements(taskId: $prompt->taskId);
         $selection = (new ExecutionTargetSelector)->select(
             $requirements,
-            [ExecutionTargetFixtures::candidate()],
+            [ExecutionTargetFixtures::candidate(observedAt: '2026-08-28T05:39:00Z')],
             ExecutionTargetFixtures::authorization(),
             '2026-08-28T05:39:00Z',
         )->selection;
@@ -47,6 +68,33 @@ final class RunIdentityFixtures
                 initiatingActor: 'user:mary',
                 createdAt: self::CREATED_AT,
             ),
+        );
+    }
+
+    public static function grant(
+        ?ExecutionTargetId $targetId = null,
+        ?RepositoryIdentity $repositoryIdentity = null,
+        ?WorkspaceAuthority $workspaceAuthority = null,
+        ?WorkspacePath $workspaceRoot = null,
+        string $environment = 'production',
+        string $runtime = 'debian-12:a1.small',
+        array $permissions = ['filesystem:read'],
+        string $issuedAt = '2026-08-28T05:00:00Z',
+        string $expiresAt = '2026-08-28T07:00:00Z',
+    ): ExecutionGrant {
+        return new ExecutionGrant(
+            id: 'grant:fixture',
+            actor: 'user:mary',
+            targetId: $targetId ?? new ExecutionTargetId('target:orbs:orb-a'),
+            repositoryIdentity: $repositoryIdentity ?? new RepositoryIdentity('repository:atlas'),
+            workspaceAuthority: $workspaceAuthority ?? new WorkspaceAuthority('workspace:personal'),
+            workspaceRoot: $workspaceRoot ?? WorkspacePath::fromInput('/workspace/atlas'),
+            environment: $environment,
+            runtime: $runtime,
+            permissions: $permissions,
+            policyVersion: 'dispatch-authorization-v1',
+            issuedAt: $issuedAt,
+            expiresAt: $expiresAt,
         );
     }
 

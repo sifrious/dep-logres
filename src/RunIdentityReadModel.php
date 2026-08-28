@@ -17,11 +17,13 @@ final readonly class RunIdentityReadModel
         public string $targetId,
         public string $provider,
         public string $runtime,
+        public string $environment,
         public string $repositoryIdentity,
         public string $workspaceAuthority,
         public string $targetSelectedAt,
         public string $targetObservedAt,
         public array $policyVersions,
+        public array $requestedPermissions,
         public string $initiatingActor,
         public string $createdAt,
         public string $providerBindingStatus,
@@ -29,6 +31,7 @@ final readonly class RunIdentityReadModel
         public ?string $dispatchedAt,
         public ?string $acknowledgedAt,
         public ?string $identityIssue,
+        public ?array $dispatchAuthorization,
     ) {}
 
     public static function fromRun(Run $run): self
@@ -48,11 +51,13 @@ final readonly class RunIdentityReadModel
             targetId: $target->id->value,
             provider: $target->provider,
             runtime: $target->runtime,
+            environment: $target->environment,
             repositoryIdentity: $target->repositoryIdentity,
             workspaceAuthority: $target->workspaceAuthority,
             targetSelectedAt: $selection->selectedAt,
             targetObservedAt: $target->observedAt,
             policyVersions: $provenance->policyVersions,
+            requestedPermissions: $provenance->requestedPermissions,
             initiatingActor: $provenance->initiatingActor,
             createdAt: $provenance->createdAt,
             providerBindingStatus: $run->providerBindingStatus->value,
@@ -60,6 +65,16 @@ final readonly class RunIdentityReadModel
             dispatchedAt: $run->dispatchedAt,
             acknowledgedAt: $run->acknowledgedAt,
             identityIssue: $run->identityIssue,
+            dispatchAuthorization: $run->dispatchAuthorization === null ? null : [
+                'grant_id' => $run->dispatchAuthorization->grantId,
+                'actor' => $run->dispatchAuthorization->actor,
+                'workspace_path' => $run->dispatchAuthorization->workspacePath->value,
+                'environment' => $run->dispatchAuthorization->environment,
+                'runtime' => $run->dispatchAuthorization->runtime,
+                'permissions' => $run->dispatchAuthorization->permissions,
+                'policy_version' => $run->dispatchAuthorization->policyVersion,
+                'authorized_at' => $run->dispatchAuthorization->authorizedAt,
+            ],
         );
     }
 }

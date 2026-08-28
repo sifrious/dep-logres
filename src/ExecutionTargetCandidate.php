@@ -18,6 +18,7 @@ final readonly class ExecutionTargetCandidate
         public TargetAvailability $availability,
         public TargetHealth $health,
         public string $runtime,
+        public string $environment,
         public string $workspaceAuthority,
         public string $repositoryIdentity,
         array $agentAdapters,
@@ -25,7 +26,7 @@ final readonly class ExecutionTargetCandidate
         public ?TaskId $currentTaskId,
         public string $observedAt,
     ) {
-        if (trim($provider) === '' || ! str_starts_with($id->value, "target:{$provider}:") || trim($runtime) === '' || trim($workspaceAuthority) === '' || trim($repositoryIdentity) === '' || ! self::nonemptyStrings($agentAdapters) || ! self::nonemptyStrings($capabilities) || ! self::timestamp($observedAt)) {
+        if (trim($provider) === '' || ! str_starts_with($id->value, "target:{$provider}:") || trim($runtime) === '' || trim($environment) === '' || trim($workspaceAuthority) === '' || trim($repositoryIdentity) === '' || ! self::nonemptyStrings($agentAdapters) || ! self::nonemptyStrings($capabilities) || ! self::timestamp($observedAt)) {
             throw new InvalidArgumentException('A target candidate requires provider facts, runtime, authority, repository, adapters, capabilities, and observation time.');
         }
 

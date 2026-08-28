@@ -33,6 +33,7 @@ final class ExecutionTargetFixtures
         array $capabilities = ['git', 'php'],
         array $agentAdapters = ['amp', 'codex'],
         ?TaskId $currentTaskId = null,
+        string $observedAt = '2026-08-28T04:30:00Z',
     ): ExecutionTargetCandidate {
         return new ExecutionTargetCandidate(
             id: new ExecutionTargetId("target:orbs:{$id}"),
@@ -40,12 +41,13 @@ final class ExecutionTargetFixtures
             availability: $availability,
             health: $health,
             runtime: 'debian-12:a1.small',
+            environment: 'production',
             workspaceAuthority: 'workspace:personal',
             repositoryIdentity: 'repository:atlas',
             agentAdapters: $agentAdapters,
             capabilities: $capabilities,
             currentTaskId: $currentTaskId,
-            observedAt: '2026-08-28T04:30:00Z',
+            observedAt: $observedAt,
         );
     }
 

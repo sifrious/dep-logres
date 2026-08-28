@@ -67,6 +67,14 @@ The package is pre-release. These names define the current consumer surface; sem
 - `TargetSelectionStatus`
 - `TargetSelectionFailure`
 - `TargetSelectionResult`
+- `RepositoryIdentity`
+- `WorkspaceAuthority`
+- `WorkspacePath`
+- `ExecutionGrant`
+- `DispatchAuthorizationSnapshot`
+- `DispatchAuthorizationFailure`
+- `DispatchAuthorizationDecision`
+- `DispatchAuthorizationPolicy`
 - `RunId`
 - `RunProvenance`
 - `Run`

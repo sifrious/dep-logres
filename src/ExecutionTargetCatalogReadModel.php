@@ -21,6 +21,7 @@ final readonly class ExecutionTargetCatalogReadModel
             'availability' => $candidate->availability->value,
             'health' => $candidate->health->value,
             'runtime' => $candidate->runtime,
+            'environment' => $candidate->environment,
             'workspace_authority' => $candidate->workspaceAuthority,
             'repository_identity' => $candidate->repositoryIdentity,
             'agent_adapters' => $candidate->agentAdapters,

@@ -10,6 +10,8 @@ final readonly class RunProvenance
 {
     public array $policyVersions;
 
+    public array $requestedPermissions;
+
     public function __construct(
         public ExecutionRequestId $requestId,
         public TaskId $taskId,
@@ -17,6 +19,7 @@ final readonly class RunProvenance
         public int $promptVersion,
         public string $promptCompilerVersion,
         public string $promptProvenanceHash,
+        array $requestedPermissions,
         public ExecutionTargetSelection $targetSelection,
         array $policyVersions,
         public string $initiatingActor,
@@ -27,6 +30,7 @@ final readonly class RunProvenance
             || $targetSelection->taskId->value !== $taskId->value
             || trim($promptCompilerVersion) === ''
             || preg_match('/^[a-f0-9]{64}$/', $promptProvenanceHash) !== 1
+            || ! self::permissions($requestedPermissions)
             || ! self::versions($policyVersions)
             || trim($initiatingActor) === ''
             || preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/', $createdAt) !== 1) {
@@ -34,7 +38,10 @@ final readonly class RunProvenance
         }
 
         ksort($policyVersions);
+        $requestedPermissions = array_values(array_unique($requestedPermissions));
+        sort($requestedPermissions);
         $this->policyVersions = $policyVersions;
+        $this->requestedPermissions = $requestedPermissions;
     }
 
     public static function capture(
@@ -51,6 +58,7 @@ final readonly class RunProvenance
             promptVersion: $prompt->version,
             promptCompilerVersion: $prompt->compilerVersion,
             promptProvenanceHash: $prompt->provenanceHash,
+            requestedPermissions: $prompt->input->allowedOperations,
             targetSelection: $targetSelection,
             policyVersions: $policyVersions,
             initiatingActor: $initiatingActor,
@@ -66,6 +74,21 @@ final readonly class RunProvenance
 
         foreach ($versions as $name => $version) {
             if (! is_string($name) || trim($name) === '' || ! is_string($version) || trim($version) === '') {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static function permissions(array $permissions): bool
+    {
+        if ($permissions === []) {
+            return false;
+        }
+
+        foreach ($permissions as $permission) {
+            if (! is_string($permission) || trim($permission) === '' || $permission === '*' || $permission === 'shell:unrestricted') {
                 return false;
             }
         }
