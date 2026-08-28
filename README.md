@@ -13,4 +13,10 @@ composer install
 composer check
 ```
 
-The local application at `/Users/mme/Projects/logres` consumes this package through a Composer path repository.
+Local applications consume this package through a Composer path repository during development.
+
+## Execution requests
+
+Logres owns immutable execution request identity, exact prompt preservation, validation, lineage, submission results, and presentation-neutral read models. Hosts provide authentication, authorization integration, identity generation, attachment storage, persistence adapters, and delivery.
+
+An original request has no parent. A correction or child request receives a new identity and references its parent; neither operation mutates the earlier request. A request is accepted only after the configured store returns successfully.

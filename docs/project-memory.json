@@ -1,0 +1,38 @@
+{
+    "schema_version": 1,
+    "project": "Logres",
+    "updated_at": "2026-08-28T03:50:00Z",
+    "facts": [
+        {"id": "F-001", "statement": "Logres is a framework-neutral execution-kernel package with PHP as its only runtime dependency."},
+        {"id": "F-002", "statement": "ExecutionRequest identity is supplied before persistence and asynchronous execution."}
+    ],
+    "assumptions": [
+        {"id": "A-001", "statement": "Version-one attachment references use artifact: and upload: namespaces supplied by host adapters."}
+    ],
+    "decisions": [
+        {"id": "D-001", "decision": "Corrections and child requests are new immutable requests with parent lineage.", "rationale": "Original caller intent must remain inspectable."},
+        {"id": "D-002", "decision": "Persistence is a package interface and acceptance follows a successful save.", "rationale": "A host failure must not produce a false accepted result."}
+    ],
+    "constraints": [
+        "Logres does not depend on Laravel, Eloquent, HTTP, queues, Blade, or a concrete process.",
+        "Task planning and execution-target selection are outside MME-5.",
+        "Controllers and form requests may map failures but may not redefine package validation."
+    ],
+    "open_questions": [
+        {"id": "Q-001", "question": "Which later ticket introduces attachment media metadata beyond a stable reference and display name?"}
+    ],
+    "glossary": [
+        {"term": "ExecutionRequest", "definition": "The immutable original request, target context, desired result, permissions, constraints, requester, delivery channel, attachments, and lineage."},
+        {"term": "Correction", "definition": "A new execution request that corrects a parent without mutating it."},
+        {"term": "Child request", "definition": "A new follow-up request linked to prior work without replacing it."}
+    ],
+    "features": [
+        {"id": "MME-5", "name": "ExecutionRequest", "stage": "MVP", "status": "in_progress"}
+    ],
+    "workflows": [
+        {"id": "W-001", "name": "Submit execution request", "states": ["mapped", "validated", "rejected_or_persisting", "accepted_or_persistence_failed"]}
+    ],
+    "content_opportunities": [
+        {"id": "C-001", "format": "post", "user_problem": "Corrections overwrite the request that explains why work began.", "concept": "Model corrections as immutable lineage before asynchronous execution starts.", "technology": "PHP value objects and ports", "project_context": "Logres ExecutionRequest", "audience": "intermediate application developers", "hook": "A corrected request is new evidence, not an edit to old evidence."}
+    ]
+}

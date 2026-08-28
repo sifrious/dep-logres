@@ -4,6 +4,24 @@ The package is pre-release. These names define the current consumer surface; sem
 
 ## Execution model
 
+- `ExecutionRequest`
+- `ExecutionRequestId`
+- `ExecutionContext`
+- `ExecutionAttachment`
+- `ExecutionConstraints`
+- `ExecutionPermissions`
+- `RequesterIdentity`
+- `DeliveryChannel`
+- `RequestRelationship`
+- `SubmitExecutionRequest`
+- `ExecutionRequestSubmission`
+- `ExecutionRequestStore`
+- `ExecutionRequestValidator`
+- `ExecutionRequestFailure`
+- `ExecutionRequestPersistenceFailure`
+- `ExecutionRequestResult`
+- `ExecutionRequestResultStatus`
+- `ExecutionRequestReadModel`
 - `Turn`
 - `TurnContext`
 - `EnvironmentSnapshot`
