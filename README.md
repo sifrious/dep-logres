@@ -20,3 +20,7 @@ Local applications consume this package through a Composer path repository durin
 Logres owns immutable execution request identity, exact prompt preservation, validation, lineage, submission results, and presentation-neutral read models. Hosts provide authentication, authorization integration, identity generation, attachment storage, persistence adapters, and delivery.
 
 An original request has no parent. A correction or child request receives a new identity and references its parent; neither operation mutates the earlier request. A request is accepted only after the configured store returns successfully.
+
+## Task plans
+
+Logres translates an accepted request into canonical tasks with stable identities, explicit outputs and acceptance evidence, dependency and readiness rules, concurrency and human-input declarations, package-owned status transitions, and re-planning lineage. The default deterministic planner produces two parallel discovery tasks followed by implementation and verification. Hosts persist and render the package plan; they do not recalculate readiness or available actions.
