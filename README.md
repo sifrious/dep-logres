@@ -28,3 +28,7 @@ Logres translates an accepted request into canonical tasks with stable identitie
 ## Task prompts
 
 Logres compiles one deterministic, immutable execution envelope for a canonical task. The envelope preserves the original request, task contract, prerequisite outputs, resolved context, project instructions, selected skills and tools, permissions, result contract, reporting contract, compiler identity, content hashes, and version lineage. Recompiling identical declared inputs returns the existing version; any declared input change creates a linked version without mutating prior bytes.
+
+## Execution targets
+
+Logres selects one concrete execution target from provider facts supplied through an `ExecutionTargetCatalog`. The package owns requirements, eligibility, explicit authorization, capability matching, health interpretation, automatic and manual selection, immutable target snapshots, failure reasons, and presentation-neutral read models. Hosts own provider authentication, inventory adapters, persistence adapters, and delivery. A task cannot be dispatched from an absent, ambiguous, unavailable, incapable, or unauthorized selection.
