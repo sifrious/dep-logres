@@ -1,34 +1,40 @@
 {
     "schema_version": 1,
     "project": "Logres",
-    "updated_at": "2026-08-28T04:18:00Z",
+    "updated_at": "2026-08-28T04:23:00Z",
     "facts": [
         {"id": "F-001", "statement": "Logres is a framework-neutral execution-kernel package with PHP as its only runtime dependency."},
         {"id": "F-002", "statement": "ExecutionRequest identity is supplied before persistence and asynchronous execution."},
         {"id": "F-003", "statement": "Task plans contain canonical Logres task identities and package-computed dependency readiness."},
-        {"id": "F-004", "statement": "The deterministic planner produces two parallel discovery tasks followed by blocked implementation and verification tasks."}
+        {"id": "F-004", "statement": "The deterministic planner produces two parallel discovery tasks followed by blocked implementation and verification tasks."},
+        {"id": "F-005", "statement": "TaskPrompt compilation freezes canonical JSON bytes containing the complete declared execution envelope and identifies them with SHA-256 hashes."}
     ],
     "assumptions": [
         {"id": "A-001", "statement": "Version-one attachment references use artifact: and upload: namespaces supplied by host adapters."},
         {"id": "A-002", "statement": "A deliberately skipped dependency is satisfied, while a canceled or failed dependency continues to block downstream work."},
-        {"id": "A-003", "statement": "Codex is the initial agent label until target selection demonstrates a need for another planner policy."}
+        {"id": "A-003", "statement": "Codex is the initial agent label until target selection demonstrates a need for another planner policy."},
+        {"id": "A-004", "statement": "Version-one project instructions can be resolved by the consuming host from its current Programming Manifesto and repository guidance."}
     ],
     "decisions": [
         {"id": "D-001", "decision": "Corrections and child requests are new immutable requests with parent lineage.", "rationale": "Original caller intent must remain inspectable."},
         {"id": "D-002", "decision": "Persistence is a package interface and acceptance follows a successful save.", "rationale": "A host failure must not produce a false accepted result."},
         {"id": "D-003", "decision": "Readiness and available actions are projections of package state rather than persisted host labels.", "rationale": "Every consumer must observe the same dependency and transition rules."},
-        {"id": "D-004", "decision": "The first planner is deterministic and replaceable through TaskPlanner.", "rationale": "A useful local plan is required now, while provider-backed planning is a genuine later substitution boundary."}
+        {"id": "D-004", "decision": "The first planner is deterministic and replaceable through TaskPlanner.", "rationale": "A useful local plan is required now, while provider-backed planning is a genuine later substitution boundary."},
+        {"id": "D-005", "decision": "Task prompt version identity advances only when declared input or compiler identity changes.", "rationale": "Repeated compilation must be idempotent while any execution-affecting change remains visible in immutable lineage."},
+        {"id": "D-006", "decision": "The compiled prompt is a stable heading followed by canonical JSON.", "rationale": "The first format is directly inspectable, deterministic, and requires no template engine or provider-specific syntax."}
     ],
     "constraints": [
         "Logres does not depend on Laravel, Eloquent, HTTP, queues, Blade, or a concrete process.",
         "Provider-backed planning and execution-target selection are outside MME-6.",
         "Automatic starts require package readiness and explicit start authority.",
-        "Controllers and form requests may map failures but may not redefine package validation."
+        "Controllers and form requests may map failures but may not redefine package validation.",
+        "Task prompt compilation cannot read host files, resolve credentials, or select execution providers."
     ],
     "open_questions": [
         {"id": "Q-001", "question": "Which later ticket introduces attachment media metadata beyond a stable reference and display name?"},
         {"id": "Q-002", "question": "Which planning provider should replace or supplement the deterministic planner when request-specific decomposition is required?"},
-        {"id": "Q-003", "question": "Which authorization policy grants automatic start authority in each host?"}
+        {"id": "Q-003", "question": "Which authorization policy grants automatic start authority in each host?"},
+        {"id": "Q-004", "question": "Which later execution ticket marks a frozen TaskPrompt version as dispatched and records provider receipt?"}
     ],
     "glossary": [
         {"term": "ExecutionRequest", "definition": "The immutable original request, target context, desired result, permissions, constraints, requester, delivery channel, attachments, and lineage."},
@@ -36,18 +42,23 @@
         {"term": "Child request", "definition": "A new follow-up request linked to prior work without replacing it."},
         {"term": "Translated task", "definition": "A canonical Logres work unit tied to an execution request with objective, output, evidence, dependencies, readiness conditions, concurrency, human-input capability, target, agent, and status."},
         {"term": "Task readiness", "definition": "A package projection that reports whether a planned task may start based on dependency outcomes."},
-        {"term": "Re-plan", "definition": "A new task plan linked to the plan it replaces without rewriting prior task history."}
+        {"term": "Re-plan", "definition": "A new task plan linked to the plan it replaces without rewriting prior task history."},
+        {"term": "TaskPrompt", "definition": "A frozen, versioned execution envelope compiled for one canonical task from explicitly declared inputs."},
+        {"term": "Provenance hash", "definition": "The SHA-256 identity of the compiler, canonical input identity, and exact compiled prompt bytes."}
     ],
     "features": [
         {"id": "MME-5", "name": "ExecutionRequest", "stage": "MVP", "status": "implemented"},
-        {"id": "MME-6", "name": "Translated task plans", "stage": "MVP", "status": "implemented"}
+        {"id": "MME-6", "name": "Translated task plans", "stage": "MVP", "status": "implemented"},
+        {"id": "MME-7", "name": "Immutable per-task prompts", "stage": "MVP", "status": "implemented"}
     ],
     "workflows": [
         {"id": "W-001", "name": "Submit execution request", "states": ["mapped", "validated", "rejected_or_persisting", "accepted_or_persistence_failed"]},
-        {"id": "W-002", "name": "Execute translated task", "states": ["planned_ready_or_blocked", "running", "waiting_or_failed", "retried_or_replanned", "succeeded_skipped_or_canceled"]}
+        {"id": "W-002", "name": "Execute translated task", "states": ["planned_ready_or_blocked", "running", "waiting_or_failed", "retried_or_replanned", "succeeded_skipped_or_canceled"]},
+        {"id": "W-003", "name": "Compile task prompt", "states": ["inputs_resolved", "canonicalized", "existing_version_returned_or_new_version_frozen", "persisted", "disclosed"]}
     ],
     "content_opportunities": [
         {"id": "C-001", "format": "post", "user_problem": "Corrections overwrite the request that explains why work began.", "concept": "Model corrections as immutable lineage before asynchronous execution starts.", "technology": "PHP value objects and ports", "project_context": "Logres ExecutionRequest", "audience": "intermediate application developers", "hook": "A corrected request is new evidence, not an edit to old evidence."},
-        {"id": "C-002", "format": "short video", "user_problem": "Queue and UI code quietly disagree about which task can run next.", "concept": "Project readiness and allowed actions from one immutable dependency graph.", "technology": "PHP enums, value objects, directed acyclic graphs", "project_context": "Logres MME-6", "audience": "intermediate application developers", "hook": "If three screens compute ready, you have three schedulers."}
+        {"id": "C-002", "format": "short video", "user_problem": "Queue and UI code quietly disagree about which task can run next.", "concept": "Project readiness and allowed actions from one immutable dependency graph.", "technology": "PHP enums, value objects, directed acyclic graphs", "project_context": "Logres MME-6", "audience": "intermediate application developers", "hook": "If three screens compute ready, you have three schedulers."},
+        {"id": "C-003", "format": "post", "user_problem": "Teams cannot reconstruct which prompt an agent actually executed.", "concept": "Freeze the complete execution envelope before dispatch and version every declared input change.", "technology": "Canonical JSON and SHA-256 in PHP", "project_context": "Logres MME-7", "audience": "intermediate agent-platform developers", "hook": "An agent run is not reproducible if its prompt is assembled after you ask what happened."}
     ]
 }

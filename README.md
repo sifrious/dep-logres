@@ -24,3 +24,7 @@ An original request has no parent. A correction or child request receives a new 
 ## Task plans
 
 Logres translates an accepted request into canonical tasks with stable identities, explicit outputs and acceptance evidence, dependency and readiness rules, concurrency and human-input declarations, package-owned status transitions, and re-planning lineage. The default deterministic planner produces two parallel discovery tasks followed by implementation and verification. Hosts persist and render the package plan; they do not recalculate readiness or available actions.
+
+## Task prompts
+
+Logres compiles one deterministic, immutable execution envelope for a canonical task. The envelope preserves the original request, task contract, prerequisite outputs, resolved context, project instructions, selected skills and tools, permissions, result contract, reporting contract, compiler identity, content hashes, and version lineage. Recompiling identical declared inputs returns the existing version; any declared input change creates a linked version without mutating prior bytes.
