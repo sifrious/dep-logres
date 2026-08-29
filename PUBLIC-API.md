@@ -56,6 +56,7 @@ The package is pre-release. These names define the current consumer surface; sem
 - `ExecutionTargetId`
 - `ExecutionTargetRequirements`
 - `ExecutionTargetCandidate`
+- `ExecutionTargetEvaluation`
 - `ExecutionTargetAuthorization`
 - `ExecutionTargetSelection`
 - `ExecutionTargetSelector`
@@ -141,6 +142,41 @@ The package is pre-release. These names define the current consumer surface; sem
 - `PostflightReport`
 - `PostflightResultAssembler`
 - `TurnRunner`
+
+## Runner boundary
+
+- `RunnerIdentity`
+- `PlatformIdentity`
+- `CapabilitySnapshot`
+- `RunnerAvailability`
+- `CurrentWorkload`
+- `RunnerDescriptor`
+- `RunnerCompatibilityRequirements`
+- `RunnerCompatibilityFailure`
+- `RunnerCompatibility`
+- `ExecutionEnvelope`
+- `EnvelopeAuthenticator`
+- `RunnerAuthorization`
+- `RunnerWorkspace`
+- `RunnerLifecycle`
+- `ExecutionStateRunnerLifecycle`
+- `RunnerRejectionReason`
+- `RunnerAcceptance`
+- `RuntimeRequest`
+- `RuntimeResult`
+- `RunnerRuntime`
+- `RunnerRuntimeObserver`
+- `RunnerEventType`
+- `RunnerEvent`
+- `RunnerEventSink`
+- `RunnerTerminalStatus`
+- `RunnerTerminalResult`
+- `RunnerLocalStage`
+- `RunnerLocalRecord`
+- `RunnerLocalStateStore`
+- `RunnerExecutionOutcome`
+- `SequencedRunnerObserver`
+- `ExecutionRunner`
 
 ## Harness substitution
 

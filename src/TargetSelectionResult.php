@@ -18,7 +18,7 @@ final readonly class TargetSelectionResult
         $this->failures = array_values($failures);
 
         if (($status === TargetSelectionStatus::Selected && ($selection === null || $this->failures !== []))
-            || ($status === TargetSelectionStatus::Rejected && ($selection !== null || $this->failures === []))) {
+            || (in_array($status, [TargetSelectionStatus::Rejected, TargetSelectionStatus::NeedsTarget], true) && ($selection !== null || $this->failures === []))) {
             throw new InvalidArgumentException('Target selection status, selection, and failures must agree.');
         }
     }

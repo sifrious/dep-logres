@@ -24,6 +24,17 @@ final readonly class ExecutionTargetReadModel
         public string $observedAt,
         public ?string $currentTaskId,
         public array $alternateTargetIds,
+        public string $executionClass,
+        public ?string $executionNodeId,
+        public ?string $providerTargetId,
+        public ?string $capabilitySnapshotVersion,
+        public string $selectionPolicyVersion,
+        public string $automaticTargetId,
+        public string $effectiveTargetId,
+        public ?array $override,
+        public string $selectionExplanation,
+        public ?string $tieBreakReason,
+        public array $candidateEvaluations,
     ) {}
 
     public static function fromSelection(ExecutionTargetSelection $selection): self
@@ -46,6 +57,17 @@ final readonly class ExecutionTargetReadModel
             observedAt: $selection->target->observedAt,
             currentTaskId: $selection->target->currentTaskId?->value,
             alternateTargetIds: $selection->alternateTargetIds,
+            executionClass: $selection->target->executionClass,
+            executionNodeId: $selection->target->executionNodeId,
+            providerTargetId: $selection->target->providerTargetId,
+            capabilitySnapshotVersion: $selection->target->capabilitySnapshot === null ? $selection->target->capabilitySnapshotId : $selection->target->capabilitySnapshot->version,
+            selectionPolicyVersion: $selection->selectionPolicyVersion,
+            automaticTargetId: $selection->automaticTarget->id->value,
+            effectiveTargetId: $selection->target->id->value,
+            override: $selection->override,
+            selectionExplanation: $selection->selectionReason,
+            tieBreakReason: $selection->tieBreakReason,
+            candidateEvaluations: array_map(static fn (ExecutionTargetEvaluation $evaluation): array => $evaluation->canonicalData(), $selection->candidateEvaluations),
         );
     }
 }

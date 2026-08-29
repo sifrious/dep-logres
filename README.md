@@ -31,7 +31,7 @@ Logres compiles one deterministic, immutable execution envelope for a canonical 
 
 ## Execution targets
 
-Logres selects one concrete execution target from provider facts supplied through an `ExecutionTargetCatalog`. The package owns requirements, eligibility, explicit authorization, capability matching, health interpretation, automatic and manual selection, immutable target snapshots, failure reasons, and presentation-neutral read models. Hosts own provider authentication, inventory adapters, persistence adapters, and delivery. A task cannot be dispatched from an absent, ambiguous, unavailable, incapable, or unauthorized selection.
+Logres selects one concrete execution target from provider facts supplied through an `ExecutionTargetCatalog`. The package owns versioned requirements, per-candidate policy checks and rejection reasons, explicit authorization, capability/freshness/workload interpretation, deterministic ranking, validated manual overrides, immutable selection provenance, and presentation-neutral read models. Hosts own provider authentication, inventory adapters, persistence adapters, and delivery. A task cannot be dispatched without one persisted eligible selection.
 
 ## Run identity and provider acknowledgement
 
@@ -48,3 +48,7 @@ The composed package proof and its application-level boundary are documented in 
 ## Dispatch authorization
 
 Logres requires an explicit, current grant before a Run can enter dispatch. The policy matches canonical repository identity, workspace authority and normalized contained path, selected target, environment, runtime, frozen prompt permissions, actor, grant validity, and target-observation freshness. An allowed decision freezes the approved context on the Run. Capabilities describe what a target can do; only a grant describes what it may do.
+
+## Runner boundary
+
+Logres defines provider-neutral runner identity, platform, availability, workload, and capability snapshot contracts. Hosts discover and persist runner observations; Wardrobe remains authoritative for runtime adapter profiles. See [docs/runner-boundary.md](docs/runner-boundary.md).

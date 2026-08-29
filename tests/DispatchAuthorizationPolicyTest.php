@@ -165,7 +165,7 @@ final class DispatchAuthorizationPolicyTest extends TestCase
         );
 
         self::assertFalse($selection->selectedSuccessfully());
-        self::assertSame('target_unavailable', $selection->failures[0]->code);
+        self::assertSame('NO_ELIGIBLE_TARGET', $selection->failures[0]->code);
     }
 
     #[Test]
