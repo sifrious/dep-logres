@@ -25,8 +25,16 @@ final readonly class ExecutionTargetCandidate
         array $capabilities,
         public ?TaskId $currentTaskId,
         public string $observedAt,
+        public ?string $providerAccountId = null,
+        public ?string $providerProjectId = null,
+        public ?string $machineIdentity = null,
+        public ExecutionClass $executionClass = ExecutionClass::ProviderHosted,
+        public ?string $image = null,
+        public ?string $adapterVersion = null,
+        public ?int $concurrencyLimit = null,
+        public int $currentWorkCount = 0,
     ) {
-        if (trim($provider) === '' || ! str_starts_with($id->value, "target:{$provider}:") || trim($runtime) === '' || trim($environment) === '' || trim($workspaceAuthority) === '' || trim($repositoryIdentity) === '' || ! self::nonemptyStrings($agentAdapters) || ! self::nonemptyStrings($capabilities) || ! self::timestamp($observedAt)) {
+        if (trim($provider) === '' || ! str_starts_with($id->value, "target:{$provider}:") || trim($runtime) === '' || trim($environment) === '' || trim($workspaceAuthority) === '' || trim($repositoryIdentity) === '' || ! self::nonemptyStrings($agentAdapters) || ! self::nonemptyStrings($capabilities) || ! self::timestamp($observedAt) || $currentWorkCount < 0 || ($concurrencyLimit !== null && $concurrencyLimit < 1)) {
             throw new InvalidArgumentException('A target candidate requires provider facts, runtime, authority, repository, adapters, capabilities, and observation time.');
         }
 

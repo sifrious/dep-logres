@@ -24,6 +24,16 @@ final readonly class ExecutionTargetReadModel
         public string $observedAt,
         public ?string $currentTaskId,
         public array $alternateTargetIds,
+        public string $executionClass,
+        public ?string $providerAccountId,
+        public ?string $providerProjectId,
+        public ?string $machineIdentity,
+        public ?string $image,
+        public string $policyVersion,
+        public ?string $requestedTargetId,
+        public bool $userOverride,
+        public ?string $overrideActor,
+        public array $candidateEvaluations,
     ) {}
 
     public static function fromSelection(ExecutionTargetSelection $selection): self
@@ -46,6 +56,16 @@ final readonly class ExecutionTargetReadModel
             observedAt: $selection->target->observedAt,
             currentTaskId: $selection->target->currentTaskId?->value,
             alternateTargetIds: $selection->alternateTargetIds,
+            executionClass: $selection->target->executionClass->value,
+            providerAccountId: $selection->target->providerAccountId,
+            providerProjectId: $selection->target->providerProjectId,
+            machineIdentity: $selection->target->machineIdentity,
+            image: $selection->target->image,
+            policyVersion: $selection->policyVersion,
+            requestedTargetId: $selection->requestedTargetId?->value,
+            userOverride: $selection->reason === TargetSelectionReason::ManualOverride,
+            overrideActor: $selection->overrideActor,
+            candidateEvaluations: array_map(static fn (CandidateEvaluation $evaluation): array => $evaluation->canonicalData(), $selection->candidateEvaluations),
         );
     }
 }

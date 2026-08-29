@@ -8,13 +8,14 @@ use Sifrious\Logres\ExecutionTargetAuthorization;
 use Sifrious\Logres\ExecutionTargetCandidate;
 use Sifrious\Logres\ExecutionTargetId;
 use Sifrious\Logres\ExecutionTargetRequirements;
+use Sifrious\Logres\ExecutionClass;
 use Sifrious\Logres\TargetAvailability;
 use Sifrious\Logres\TargetHealth;
 use Sifrious\Logres\TaskId;
 
 final class ExecutionTargetFixtures
 {
-    public static function requirements(array $capabilities = ['git', 'php'], ?TaskId $taskId = null): ExecutionTargetRequirements
+    public static function requirements(array $capabilities = ['git', 'php'], ?TaskId $taskId = null, bool $allowDegraded = false, ?ExecutionClass $executionClass = null): ExecutionTargetRequirements
     {
         return new ExecutionTargetRequirements(
             taskId: $taskId ?? new TaskId('task:accepted-fixture:inspect'),
@@ -23,6 +24,8 @@ final class ExecutionTargetFixtures
             repositoryIdentity: 'repository:atlas',
             agentAdapter: 'codex',
             capabilities: $capabilities,
+            requiredExecutionClass: $executionClass,
+            allowDegraded: $allowDegraded,
         );
     }
 
@@ -34,6 +37,9 @@ final class ExecutionTargetFixtures
         array $agentAdapters = ['amp', 'codex'],
         ?TaskId $currentTaskId = null,
         string $observedAt = '2026-08-28T04:30:00Z',
+        ExecutionClass $executionClass = ExecutionClass::ProviderHosted,
+        ?int $concurrencyLimit = null,
+        int $currentWorkCount = 0,
     ): ExecutionTargetCandidate {
         return new ExecutionTargetCandidate(
             id: new ExecutionTargetId("target:orbs:{$id}"),
@@ -48,6 +54,14 @@ final class ExecutionTargetFixtures
             capabilities: $capabilities,
             currentTaskId: $currentTaskId,
             observedAt: $observedAt,
+            providerAccountId: 'account:personal',
+            providerProjectId: 'project:atlas',
+            machineIdentity: "orb:{$id}",
+            executionClass: $executionClass,
+            image: 'debian:12',
+            adapterVersion: 'codex-1',
+            concurrencyLimit: $concurrencyLimit,
+            currentWorkCount: $currentWorkCount,
         );
     }
 

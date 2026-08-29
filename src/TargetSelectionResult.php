@@ -9,13 +9,16 @@ use InvalidArgumentException;
 final readonly class TargetSelectionResult
 {
     public array $failures;
+    public array $candidateEvaluations;
 
     public function __construct(
         public TargetSelectionStatus $status,
         public ?ExecutionTargetSelection $selection,
         array $failures = [],
+        array $candidateEvaluations = [],
     ) {
         $this->failures = array_values($failures);
+        $this->candidateEvaluations = array_values($candidateEvaluations);
 
         if (($status === TargetSelectionStatus::Selected && ($selection === null || $this->failures !== []))
             || ($status === TargetSelectionStatus::Rejected && ($selection !== null || $this->failures === []))) {

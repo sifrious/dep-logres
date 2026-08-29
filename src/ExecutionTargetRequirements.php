@@ -17,8 +17,13 @@ final readonly class ExecutionTargetRequirements
         public string $repositoryIdentity,
         public string $agentAdapter,
         array $capabilities,
+        public ?string $providerAccountId = null,
+        public ?string $providerProjectId = null,
+        public ?ExecutionClass $requiredExecutionClass = null,
+        public bool $allowDegraded = false,
+        public int $maximumObservationAgeSeconds = 300,
     ) {
-        if (trim($provider) === '' || trim($workspaceAuthority) === '' || trim($repositoryIdentity) === '' || trim($agentAdapter) === '' || ! self::hasCapabilities($capabilities)) {
+        if (trim($provider) === '' || trim($workspaceAuthority) === '' || trim($repositoryIdentity) === '' || trim($agentAdapter) === '' || ! self::hasCapabilities($capabilities) || $maximumObservationAgeSeconds < 1) {
             throw new InvalidArgumentException('Target requirements need provider, workspace authority, repository identity, agent adapter, and capabilities.');
         }
 

@@ -55,6 +55,9 @@ The package is pre-release. These names define the current consumer surface; sem
 - `ExecutionTargetId`
 - `ExecutionTargetRequirements`
 - `ExecutionTargetCandidate`
+- `ExecutionClass`
+- `CandidateEvaluation`
+- `CandidateRejectionReason`
 - `ExecutionTargetAuthorization`
 - `ExecutionTargetSelection`
 - `ExecutionTargetSelector`
