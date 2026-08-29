@@ -17,7 +17,7 @@ Local applications consume this package through a Composer path repository durin
 
 ## Execution requests
 
-Logres owns immutable execution request identity, exact prompt preservation, validation, lineage, submission results, and presentation-neutral read models. Hosts provide authentication, authorization integration, identity generation, attachment storage, persistence adapters, and delivery.
+Logres owns immutable execution request identity, resolved executable work, validation, lineage, submission results, and presentation-neutral read models. When work is materialized from deliberation, `DeliberationOrigin` preserves upstream input, intent, conversation, plan, and step references without making Logres own those domains. Hosts provide authentication, authorization integration, identity generation, attachment storage, persistence adapters, and delivery.
 
 An original request has no parent. A correction or child request receives a new identity and references its parent; neither operation mutates the earlier request. A request is accepted only after the configured store returns successfully.
 

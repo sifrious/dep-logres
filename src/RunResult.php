@@ -8,6 +8,9 @@ use InvalidArgumentException;
 
 final readonly class RunResult
 {
+    /** @var list<RunEvidence> */
+    public array $evidence;
+
     public function __construct(
         public RunStatus $status,
         public string $stdout = '',
@@ -15,6 +18,9 @@ final readonly class RunResult
         public ?int $exitCode = null,
         public ?int $signal = null,
         public ?string $reason = null,
+        array $evidence = [],
+        public ?string $agentClaim = null,
+        public ?string $observedOutcome = null,
     ) {
         if (! $this->status->isTerminal()) {
             throw new InvalidArgumentException('A run result requires a terminal status.');
@@ -27,11 +33,18 @@ final readonly class RunResult
         if ($this->status !== RunStatus::Succeeded && $this->exitCode === 0) {
             throw new InvalidArgumentException('A non-successful run cannot carry exit code zero.');
         }
+
+        foreach ($evidence as $item) {
+            if (! $item instanceof RunEvidence) {
+                throw new InvalidArgumentException('Run result evidence must contain RunEvidence values.');
+            }
+        }
+        $this->evidence = array_values($evidence);
     }
 
-    public static function succeeded(string $stdout = '', string $stderr = ''): self
+    public static function succeeded(string $stdout = '', string $stderr = '', array $evidence = [], ?string $agentClaim = null, ?string $observedOutcome = null): self
     {
-        return new self(RunStatus::Succeeded, $stdout, $stderr, 0);
+        return new self(RunStatus::Succeeded, $stdout, $stderr, 0, evidence: $evidence, agentClaim: $agentClaim, observedOutcome: $observedOutcome);
     }
 
     public static function failed(string $stderr, ?int $exitCode = null, string $stdout = '', ?int $signal = null): self

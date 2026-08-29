@@ -5,6 +5,7 @@ The package is pre-release. These names define the current consumer surface; sem
 ## Execution model
 
 - `ExecutionRequest`
+- `DeliberationOrigin`
 - `ExecutionRequestId`
 - `ExecutionContext`
 - `ExecutionAttachment`
@@ -107,6 +108,7 @@ The package is pre-release. These names define the current consumer surface; sem
 - `RunTransitionPolicy`
 - `InvalidRunTransition`
 - `RunResult`
+- `RunEvidence`
 - `TurnRunner`
 
 ## Harness substitution

@@ -8,6 +8,7 @@ use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Sifrious\Logres\RunResult;
+use Sifrious\Logres\RunEvidence;
 use Sifrious\Logres\RunStatus;
 
 final class RunResultTest extends TestCase
@@ -48,5 +49,18 @@ final class RunResultTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
 
         new RunResult(RunStatus::Failed, exitCode: 0);
+    }
+
+    #[Test]
+    public function it_keeps_provider_claims_separate_from_observed_postflight_evidence(): void
+    {
+        $result = RunResult::succeeded(
+            evidence: [new RunEvidence('git.commit', 'sha:abc123', '2026-08-29T12:00:00Z')],
+            agentClaim: 'Five files changed and tests pass.',
+            observedOutcome: 'Three files changed; one verification failed.',
+        );
+        self::assertSame('Five files changed and tests pass.', $result->agentClaim);
+        self::assertSame('Three files changed; one verification failed.', $result->observedOutcome);
+        self::assertSame('sha:abc123', $result->evidence[0]->reference);
     }
 }

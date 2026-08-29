@@ -20,6 +20,7 @@ final readonly class ExecutionRequest
         public DeliveryChannel $channel,
         public RequestRelationship $relationship = RequestRelationship::Original,
         public ?ExecutionRequestId $parentRequestId = null,
+        public ?DeliberationOrigin $origin = null,
     ) {
         $this->attachments = array_values($attachments);
     }
