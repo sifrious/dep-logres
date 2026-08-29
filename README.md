@@ -40,3 +40,12 @@ Logres creates a stable local `Run` and immutable provenance snapshot before dis
 ## Dispatch authorization
 
 Logres requires an explicit, current grant before a Run can enter dispatch. The policy matches canonical repository identity, workspace authority and normalized contained path, selected target, environment, runtime, frozen prompt permissions, actor, grant validity, and target-observation freshness. An allowed decision freezes the approved context on the Run. Capabilities describe what a target can do; only a grant describes what it may do.
+
+### Amp account onboarding integration
+
+For Burdgeon's MME-1859 Amp account onboarding, the host owns Amp authentication,
+credential storage, project discovery, and readiness checks. Logres receives only
+the normalized, policy-approved project and repository facts needed for an
+immutable dispatch authorization snapshot. Amp credentials and refresh material
+must never be included in Runs, prompts, events, results, or authorization
+snapshots.
