@@ -47,4 +47,19 @@ final class RunnerLifecycleTest extends TestCase
         $this->expectException(StaleRunnerLease::class);
         $lease->acknowledge(new DateTimeImmutable('2026-08-28T12:01:00Z'));
     }
+
+    public function test_only_an_expired_acknowledged_lease_can_be_recovered(): void
+    {
+        $lease = new RunnerLease('lease:one', new RunId('run:one'), new ExecutionTargetId('target:amp:one'), 'runner:one', RunnerLeaseStatus::Offered, new DateTimeImmutable('2026-08-28T12:00:00Z'), new DateTimeImmutable('2026-08-28T12:01:00Z'));
+        $acknowledged = $lease->acknowledge(new DateTimeImmutable('2026-08-28T12:00:30Z'));
+        $recovered = $acknowledged->recover(new DateTimeImmutable('2026-08-28T12:01:00Z'), 60);
+
+        self::assertSame(RunnerLeaseStatus::Acknowledged, $recovered->status);
+        self::assertEquals(new DateTimeImmutable('2026-08-28T12:01:00Z'), $recovered->leasedAt);
+        self::assertEquals(new DateTimeImmutable('2026-08-28T12:02:00Z'), $recovered->expiresAt);
+        self::assertEquals($acknowledged->acknowledgedAt, $recovered->acknowledgedAt);
+
+        $this->expectException(InvalidArgumentException::class);
+        $acknowledged->recover(new DateTimeImmutable('2026-08-28T12:00:59Z'), 60);
+    }
 }

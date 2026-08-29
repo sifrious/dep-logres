@@ -80,6 +80,24 @@ final readonly class RunnerLease
         return new self($this->id, $this->runId, $this->targetId, $this->runnerId, $this->status, $this->leasedAt, $now->modify("+{$ttlSeconds} seconds"), $this->acknowledgedAt);
     }
 
+    public function recover(DateTimeImmutable $now, int $ttlSeconds): self
+    {
+        if ($this->status !== RunnerLeaseStatus::Acknowledged || $now < $this->expiresAt || $ttlSeconds < 1) {
+            throw new InvalidArgumentException('Only an expired acknowledged lease can be recovered.');
+        }
+
+        return new self(
+            $this->id,
+            $this->runId,
+            $this->targetId,
+            $this->runnerId,
+            RunnerLeaseStatus::Acknowledged,
+            $now,
+            $now->modify("+{$ttlSeconds} seconds"),
+            $this->acknowledgedAt,
+        );
+    }
+
     public function assertActive(DateTimeImmutable $now): void
     {
         if ($now >= $this->expiresAt) {
