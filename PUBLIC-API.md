@@ -81,6 +81,13 @@ The package is pre-release. These names define the current consumer surface; sem
 - `RunStore`
 - `RunIdentityConflict`
 - `RunIdentityReadModel`
+- `RunnerLeaseStatus`
+- `RunnerLease`
+- `RunnerLeaseStore`
+- `StaleRunnerLease`
+- `RunExecutionRecord`
+- `RunExecutionRecordStore`
+- `RunExecutionReadModel`
 - `ProviderExecutionId`
 - `ProviderAcknowledgement`
 - `ProviderBindingStatus`
