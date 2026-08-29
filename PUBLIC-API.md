@@ -108,6 +108,7 @@ The package is pre-release. These names define the current consumer surface; sem
 - `RunTransitionPolicy`
 - `InvalidRunTransition`
 - `RunResult`
+- `RunResultReadModel`
 - `RunEvidence`
 - `PreflightSnapshot`
 - `PostflightReport`
