@@ -138,6 +138,9 @@ The package is pre-release. These names define the current consumer surface; sem
 - `RunnerAvailability`
 - `CurrentWorkload`
 - `RunnerDescriptor`
+- `RunnerCompatibilityRequirements`
+- `RunnerCompatibilityFailure`
+- `RunnerCompatibility`
 
 ## Harness substitution
 

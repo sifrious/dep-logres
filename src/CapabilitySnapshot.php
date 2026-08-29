@@ -29,4 +29,20 @@ final readonly class CapabilitySnapshot
         sort($values);
         return $values;
     }
+
+    public function supports(RunnerCompatibilityRequirements $requirements): RunnerCompatibility
+    {
+        $failures = [];
+        if (! in_array($requirements->runtimeAdapterProfile, $this->runtimeAdapters, true)) {
+            $failures[] = RunnerCompatibilityFailure::RuntimeAdapterProfile;
+        }
+        if (! in_array($requirements->protocolVersion, $this->protocolVersions, true)) {
+            $failures[] = RunnerCompatibilityFailure::ProtocolVersion;
+        }
+        if (array_diff($requirements->capabilities, $this->capabilities) !== []) {
+            $failures[] = RunnerCompatibilityFailure::Capability;
+        }
+
+        return new RunnerCompatibility($failures);
+    }
 }

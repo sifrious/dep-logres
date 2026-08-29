@@ -14,6 +14,8 @@ use Sifrious\Logres\PlatformIdentity;
 use Sifrious\Logres\RunnerAvailability;
 use Sifrious\Logres\RunnerDescriptor;
 use Sifrious\Logres\RunnerIdentity;
+use Sifrious\Logres\RunnerCompatibilityFailure;
+use Sifrious\Logres\RunnerCompatibilityRequirements;
 
 final class RunnerBoundaryTest extends TestCase
 {
@@ -28,6 +30,7 @@ final class RunnerBoundaryTest extends TestCase
             RunnerAvailability::Available,
             new CurrentWorkload(1, 4),
             ['grant:workspace-alpha'],
+            ['workspace:alpha'],
         );
 
         self::assertSame('runner:workstation.alpha', $descriptor->identity->value);
@@ -37,6 +40,11 @@ final class RunnerBoundaryTest extends TestCase
         self::assertSame(['1', '2'], $descriptor->capabilities->protocolVersions);
         self::assertSame($observedAt, $descriptor->capabilities->observedAt);
         self::assertSame(['grant:workspace-alpha'], $descriptor->authorizationGrantReferences);
+        self::assertTrue($descriptor->compatibleWith(new RunnerCompatibilityRequirements('codex', '1', ['agent'], 'workspace:alpha', 'grant:workspace-alpha'))->compatible());
+        self::assertSame(
+            [RunnerCompatibilityFailure::RuntimeAdapterProfile, RunnerCompatibilityFailure::WorkspaceIdentity],
+            $descriptor->compatibleWith(new RunnerCompatibilityRequirements('claude', '1', ['agent'], 'workspace:other', 'grant:workspace-alpha'))->failures,
+        );
     }
 
     #[Test]
