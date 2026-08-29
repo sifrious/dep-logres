@@ -11,6 +11,7 @@ final readonly class TurnRunner
     public function __construct(
         private InvariantPreflight $invariantPreflight,
         private BeforeTurnPipeline $before,
+        private InvariantFinalization $invariantFinalization,
         private AfterTurnPipeline $after,
     ) {}
 
@@ -35,6 +36,10 @@ final readonly class TurnRunner
             $status = $harness->status($handle, $observer);
         } while (! $status->status->isTerminal());
 
-        return $this->after->process($request, $context, $status->terminalResult());
+        $result = $this->invariantFinalization->process($request, $context, $status->terminalResult());
+        $result = $this->after->process($request, $context, $result);
+        $this->invariantFinalization->assertCanonical($result);
+
+        return $result;
     }
 }

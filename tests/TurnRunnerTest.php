@@ -22,6 +22,10 @@ use Sifrious\Logres\HarnessStatus;
 use Sifrious\Logres\InvariantBeforeTurnHandler;
 use Sifrious\Logres\InvariantPreflight;
 use Sifrious\Logres\InvariantPreflightPhase;
+use Sifrious\Logres\InvariantAfterTurnHandler;
+use Sifrious\Logres\InvariantFinalization;
+use Sifrious\Logres\InvariantFinalizationPhase;
+use Sifrious\Logres\RequiredVerificationOutcome;
 use Sifrious\Logres\RunRequest;
 use Sifrious\Logres\RunResult;
 use Sifrious\Logres\Turn;
@@ -42,6 +46,7 @@ final class TurnRunnerTest extends TestCase
                 new SequencedInvariantHandler(InvariantPreflightPhase::Provenance, $sequence),
             ]),
             new BeforeTurnPipeline,
+            new InvariantFinalization(FinalizationFixtures::passing($sequence)),
             new AfterTurnPipeline,
         );
 
@@ -76,12 +81,13 @@ final class TurnRunnerTest extends TestCase
                 new SequencedInvariantHandler(InvariantPreflightPhase::Workspace, $sequence),
             ]),
             new BeforeTurnPipeline([new SequencedBeforeHandler($sequence)]),
+            new InvariantFinalization(FinalizationFixtures::passing($sequence)),
             new AfterTurnPipeline([new SequencedAfterHandler($sequence)]),
         );
 
         $result = $runner->run($request, $context, $harness, $observer);
 
-        self::assertEquals(RunResult::succeeded('complete'), $result);
+        self::assertEquals(RunResult::succeeded('complete')->withRequiredVerification(RequiredVerificationOutcome::Passed), $result);
         self::assertSame([
             'invariant:Authorization',
             'invariant:Workspace',
@@ -95,8 +101,47 @@ final class TurnRunnerTest extends TestCase
             'stderr',
             'artifact',
             'status:succeeded',
+            'finalize:NormalizeProviderClaim',
+            'finalize:ObserveEndingState',
+            'finalize:Verify',
+            'finalize:AssembleCanonicalResult',
+            'finalize:PersistOperationalResult',
+            'finalize:ScheduleHistorianExport',
             'after',
         ], $sequence->events);
+    }
+}
+
+final class FinalizationFixtures
+{
+    public static function passing(Sequence $sequence): array
+    {
+        return array_map(
+            static fn (InvariantFinalizationPhase $phase): SequencedFinalizer => new SequencedFinalizer($phase, $sequence),
+            array_reverse(InvariantFinalizationPhase::cases()),
+        );
+    }
+}
+
+final readonly class SequencedFinalizer implements InvariantAfterTurnHandler
+{
+    public function __construct(
+        private InvariantFinalizationPhase $invariantPhase,
+        private Sequence $sequence,
+    ) {}
+
+    public function phase(): InvariantFinalizationPhase
+    {
+        return $this->invariantPhase;
+    }
+
+    public function handle(RunRequest $request, TurnContext $context, RunResult $result): RunResult
+    {
+        $this->sequence->events[] = "finalize:{$this->invariantPhase->name}";
+
+        return $this->invariantPhase === InvariantFinalizationPhase::Verify
+            ? $result->withRequiredVerification(RequiredVerificationOutcome::Passed)
+            : $result;
     }
 }
 

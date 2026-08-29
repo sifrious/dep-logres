@@ -21,6 +21,7 @@ final readonly class RunResult
         array $evidence = [],
         public ?string $agentClaim = null,
         public ?string $observedOutcome = null,
+        public ?RequiredVerificationOutcome $requiredVerification = null,
     ) {
         if (! $this->status->isTerminal()) {
             throw new InvalidArgumentException('A run result requires a terminal status.');
@@ -60,5 +61,36 @@ final readonly class RunResult
     public static function cancelled(string $stdout = '', string $stderr = '', ?string $reason = null): self
     {
         return new self(RunStatus::Cancelled, $stdout, $stderr, null, null, $reason);
+    }
+
+    public static function providerError(string $stderr, ?string $reason = null): self
+    {
+        return new self(RunStatus::ProviderError, stderr: $stderr, reason: $reason);
+    }
+
+    public function withRequiredVerification(RequiredVerificationOutcome $outcome): self
+    {
+        $status = $this->status;
+        $reason = $this->reason;
+        $exitCode = $this->exitCode;
+
+        if ($status === RunStatus::Succeeded && $outcome !== RequiredVerificationOutcome::Passed) {
+            $status = RunStatus::Failed;
+            $exitCode = null;
+            $reason ??= 'Required verification did not pass.';
+        }
+
+        return new self(
+            status: $status,
+            stdout: $this->stdout,
+            stderr: $this->stderr,
+            exitCode: $exitCode,
+            signal: $this->signal,
+            reason: $reason,
+            evidence: $this->evidence,
+            agentClaim: $this->agentClaim,
+            observedOutcome: $this->observedOutcome,
+            requiredVerification: $outcome,
+        );
     }
 }

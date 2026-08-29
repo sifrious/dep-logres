@@ -138,6 +138,10 @@ Consumers depend on `HarnessInterface`. `AbstractHarness` is optional shared inv
 - `InvariantPreflightPhase`
 - `InvariantBeforeTurnHandler`
 - `InvariantPreflight`
+- `InvariantFinalizationPhase`
+- `InvariantAfterTurnHandler`
+- `InvariantFinalization`
+- `RequiredVerificationOutcome`
 - `BeforeTurnHandler`
 - `BeforeTurnPipeline`
 - `AfterTurnHandler`
