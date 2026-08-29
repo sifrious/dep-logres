@@ -11,4 +11,5 @@ enum RunnerCompatibilityFailure: string
     case Capability = 'capability';
     case WorkspaceIdentity = 'workspace_identity';
     case AuthorizationGrant = 'authorization_grant';
+    case StaleCapabilitySnapshot = 'stale_capability_snapshot';
 }

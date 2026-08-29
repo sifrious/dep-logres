@@ -11,7 +11,7 @@ Logres defines the canonical, provider-neutral description of a runner. A runner
 - `CurrentWorkload` records active work against positive capacity.
 - `RunnerDescriptor` combines those observations with stable authorization-grant references.
 
-Arrays in a capability snapshot are non-empty, de-duplicated, and sorted so equivalent observations have deterministic values. The snapshot is evidence observed at a point in time; it does not grant dispatch authority.
+Arrays in a capability snapshot are non-empty, de-duplicated, and sorted so equivalent observations have deterministic values. Each snapshot carries a content-derived `capability-snapshot:` version covering its normalized observations and timestamp. Changed observations therefore create new immutable versions without rewriting the version frozen into prior Run provenance. Snapshot staleness is evaluated explicitly and remains distinct from current `RunnerAvailability`. The snapshot is evidence observed at a point in time; it does not grant dispatch authority.
 
 ## Ownership
 

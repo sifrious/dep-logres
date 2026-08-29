@@ -67,4 +67,28 @@ final class RunnerBoundaryTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         new CurrentWorkload(2, 1);
     }
+
+    #[Test]
+    public function capability_snapshots_are_versioned_and_freshness_is_not_availability(): void
+    {
+        $observedAt = new DateTimeImmutable('2026-08-29T12:00:00Z');
+        $original = new CapabilitySnapshot(['agent'], ['codex'], ['1'], $observedAt);
+        $same = new CapabilitySnapshot(['agent'], ['codex'], ['1'], $observedAt, $original->version);
+        $changed = new CapabilitySnapshot(['agent', 'browser'], ['codex'], ['1'], $observedAt);
+
+        self::assertSame($original->version, $same->version);
+        self::assertNotSame($original->version, $changed->version);
+        self::assertFalse($original->staleAt(new DateTimeImmutable('2026-08-29T12:04:59Z'), 300));
+        self::assertTrue($original->staleAt(new DateTimeImmutable('2026-08-29T12:05:01Z'), 300));
+
+        $descriptor = new RunnerDescriptor(
+            new RunnerIdentity('runner:freshness'), new PlatformIdentity('linux', 'arm64'), $original,
+            RunnerAvailability::Available, new CurrentWorkload(0, 1), ['grant:test'], ['workspace:test'],
+        );
+        $compatibility = $descriptor->compatibleWith(new RunnerCompatibilityRequirements(
+            'codex', '1', ['agent'], 'workspace:test', 'grant:test', new DateTimeImmutable('2026-08-29T12:05:01Z'), 300,
+        ));
+        self::assertSame(RunnerAvailability::Available, $descriptor->availability);
+        self::assertSame([RunnerCompatibilityFailure::StaleCapabilitySnapshot], $compatibility->failures);
+    }
 }
