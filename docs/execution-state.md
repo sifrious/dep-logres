@@ -12,6 +12,12 @@ A Run is one stable logical execution, such as `run:42`. Attempt `attempt:42:1` 
 
 `LeaseToken` is authority-bearing and is deliberately omitted from `ExecutionStateReadModel`. Hosts must store and transmit it as a secret.
 
+### Landing `AgentTask` migration map
+
+The earlier application slice in `sifrious/logres-site#11` was reconciled into this aggregate rather than copied into a second owner. Its lifecycle vocabulary maps as follows: `queued` → `pending`, `provisioning` → `preparing`, `running` and `merging` → `running` (the runtime/result references distinguish the phase), `awaiting_approval` and `frozen` → `needs_input`, `merged` → `succeeded`, `rejected` → `failed`, and `cancelled` → `cancelled`.
+
+Original columns have explicit package homes: Run identity owns `id`; immutable `ExecutionStateDetails` owns `repo_id` as a Stacks workspace identity, `parent_task_id`, title, prompt, base/working branch, worktree/SQLite evidence paths, PR/result metadata, output evidence path, creator/approver identities, approval time, runtime invocation, target reference, and update observation; `ExecutionState` owns status, scheduled/start/finish timestamps and current error; `createdAt` owns `created_at`. `recordApproval` and `recordExecutionResult` change this current slice through aggregate methods. The read model exposes these values without treating paths as workspace identity.
+
 ## Run state machine
 
 The package's complete legal transition graph is defined by `RunTransitionPolicy`:

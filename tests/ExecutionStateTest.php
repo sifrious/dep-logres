@@ -12,6 +12,7 @@ use Sifrious\Logres\AttemptId;
 use Sifrious\Logres\AttemptStatus;
 use Sifrious\Logres\ExecutionNodeRef;
 use Sifrious\Logres\ExecutionState;
+use Sifrious\Logres\ExecutionStateDetails;
 use Sifrious\Logres\ExecutionStateReadModel;
 use Sifrious\Logres\ExecutionStateRejected;
 use Sifrious\Logres\ExecutionStateRejectionReason;
@@ -105,6 +106,38 @@ final class ExecutionStateTest extends TestCase
         self::assertSame('node:a', $read->currentAttempt['leases'][0]['holder']);
         self::assertSame('2026-08-29T12:01:01+00:00', $read->currentAttempt['leases'][0]['expires_at']);
         self::assertArrayNotHasKey('token', $read->currentAttempt['leases'][0]);
+    }
+
+    #[Test]
+    public function it_preserves_the_landing_agent_task_fields_in_package_owned_current_state(): void
+    {
+        $details = new ExecutionStateDetails(
+            title: 'Implement state machine',
+            prompt: 'Implement lifecycle rules',
+            createdByUserId: 'user:creator',
+            workspaceId: 'workspace:abc',
+            parentTaskId: 'plan:456',
+            baseBranch: 'main',
+            branchName: 'codex/mme-1212',
+            worktreePath: '/evidence/worktree',
+            sqlitePath: '/evidence/run.sqlite',
+            runtimeInvocationId: 'runtime:789',
+            targetReference: 'target:mac:1',
+        );
+        $state = ExecutionState::create(new RunId('run:details'), $this->at(0), $details)
+            ->recordApproval('user:approver', $this->at(1))
+            ->recordExecutionResult(3, 'https://github.com/sifrious/dep-logres/pull/3', ['files' => 20], '/evidence/output.log', $this->at(2));
+        $read = ExecutionStateReadModel::fromState($state);
+
+        self::assertSame([
+            'repo_id', 'parent_task_id', 'title', 'prompt', 'base_branch', 'branch_name',
+            'worktree_path', 'sqlite_path', 'pr_number', 'pr_url', 'diff_stats',
+            'output_log_path', 'error_message', 'created_by_user_id', 'approved_by_user_id',
+            'approved_at', 'runtime_invocation_id', 'target_reference', 'updated_at',
+        ], array_keys($read->details));
+        self::assertSame('workspace:abc', $read->details['repo_id']);
+        self::assertSame('user:approver', $read->details['approved_by_user_id']);
+        self::assertSame(3, $read->details['pr_number']);
     }
 
     private function readyState(): ExecutionState

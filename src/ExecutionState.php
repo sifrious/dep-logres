@@ -22,6 +22,7 @@ final readonly class ExecutionState
         public ?string $failureReason = null,
         public ?string $terminalResultReference = null,
         public int $version = 0,
+        public ?ExecutionStateDetails $details = null,
     ) {
         if ($version < 0) {
             throw new InvalidArgumentException('Execution-state version cannot be negative.');
@@ -36,9 +37,9 @@ final readonly class ExecutionState
         }
     }
 
-    public static function create(RunId $runId, DateTimeImmutable $createdAt): self
+    public static function create(RunId $runId, DateTimeImmutable $createdAt, ?ExecutionStateDetails $details = null): self
     {
-        return new self($runId, RunStatus::Pending, $createdAt);
+        return new self($runId, RunStatus::Pending, $createdAt, details: $details);
     }
 
     public function scheduleAttempt(AttemptId $attemptId, DateTimeImmutable $now): self
@@ -183,6 +184,24 @@ final readonly class ExecutionState
         return null;
     }
 
+    public function recordApproval(string $approvedByUserId, DateTimeImmutable $approvedAt): self
+    {
+        if ($this->details === null) {
+            throw new InvalidArgumentException('Approval details require an execution details record.');
+        }
+        $details = $this->details->approved($approvedByUserId, $approvedAt);
+        return $details === $this->details ? $this : $this->copy(details: $details);
+    }
+
+    /** @param array<string, int|float|string|bool|null>|null $diffStats */
+    public function recordExecutionResult(?int $pullRequestNumber, ?string $pullRequestUrl, ?array $diffStats, ?string $outputLogPath, DateTimeImmutable $recordedAt): self
+    {
+        if ($this->details === null) {
+            throw new InvalidArgumentException('Result details require an execution details record.');
+        }
+        return $this->copy(details: $this->details->result($pullRequestNumber, $pullRequestUrl, $diffStats, $outputLogPath, $recordedAt));
+    }
+
     private function requireCurrentAttempt(AttemptId $id): ExecutionAttempt
     {
         $attempt = $this->currentAttempt();
@@ -233,9 +252,9 @@ final readonly class ExecutionState
     }
 
     /** @param list<ExecutionAttempt>|null $attempts */
-    private function copy(?RunStatus $status = null, ?DateTimeImmutable $scheduledAt = null, ?DateTimeImmutable $startedAt = null, ?DateTimeImmutable $finishedAt = null, AttemptId|false|null $activeAttemptId = false, ?array $attempts = null, ?string $failureReason = null, ?string $terminalResultReference = null): self
+    private function copy(?RunStatus $status = null, ?DateTimeImmutable $scheduledAt = null, ?DateTimeImmutable $startedAt = null, ?DateTimeImmutable $finishedAt = null, AttemptId|false|null $activeAttemptId = false, ?array $attempts = null, ?string $failureReason = null, ?string $terminalResultReference = null, ?ExecutionStateDetails $details = null): self
     {
-        return new self($this->runId, $status ?? $this->status, $this->createdAt, $scheduledAt ?? $this->scheduledAt, $startedAt ?? $this->startedAt, $finishedAt ?? $this->finishedAt, $activeAttemptId === false ? $this->activeAttemptId : $activeAttemptId, $attempts ?? $this->attempts, $failureReason ?? $this->failureReason, $terminalResultReference ?? $this->terminalResultReference, $this->version + 1);
+        return new self($this->runId, $status ?? $this->status, $this->createdAt, $scheduledAt ?? $this->scheduledAt, $startedAt ?? $this->startedAt, $finishedAt ?? $this->finishedAt, $activeAttemptId === false ? $this->activeAttemptId : $activeAttemptId, $attempts ?? $this->attempts, $failureReason ?? $this->failureReason, $terminalResultReference ?? $this->terminalResultReference, $this->version + 1, $details ?? $this->details);
     }
 
     /** @return never */

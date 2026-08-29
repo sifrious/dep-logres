@@ -18,6 +18,7 @@ final readonly class ExecutionStateReadModel
         public ?array $currentAttempt,
         public array $attempts,
         public int $version,
+        public ?array $details,
     ) {}
 
     public static function fromState(ExecutionState $state): self
@@ -37,6 +38,27 @@ final readonly class ExecutionStateReadModel
             $current === null ? null : self::attempt($current),
             $attempts,
             $state->version,
+            $state->details === null ? null : [
+                'repo_id' => $state->details->workspaceId,
+                'parent_task_id' => $state->details->parentTaskId,
+                'title' => $state->details->title,
+                'prompt' => $state->details->prompt,
+                'base_branch' => $state->details->baseBranch,
+                'branch_name' => $state->details->branchName,
+                'worktree_path' => $state->details->worktreePath,
+                'sqlite_path' => $state->details->sqlitePath,
+                'pr_number' => $state->details->pullRequestNumber,
+                'pr_url' => $state->details->pullRequestUrl,
+                'diff_stats' => $state->details->diffStats,
+                'output_log_path' => $state->details->outputLogPath,
+                'error_message' => $state->failureReason,
+                'created_by_user_id' => $state->details->createdByUserId,
+                'approved_by_user_id' => $state->details->approvedByUserId,
+                'approved_at' => $state->details->approvedAt?->format(DATE_ATOM),
+                'runtime_invocation_id' => $state->details->runtimeInvocationId,
+                'target_reference' => $state->details->targetReference,
+                'updated_at' => $state->details->updatedAt?->format(DATE_ATOM),
+            ],
         );
     }
 
