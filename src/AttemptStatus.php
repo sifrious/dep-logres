@@ -12,9 +12,12 @@ enum AttemptStatus: string
     case Succeeded = 'succeeded';
     case Failed = 'failed';
     case Expired = 'expired';
+    case ReconciliationRequired = 'reconciliation_required';
+    case Cancelled = 'cancelled';
+    case TimedOut = 'timed_out';
 
     public function isTerminal(): bool
     {
-        return in_array($this, [self::Succeeded, self::Failed], true);
+        return in_array($this, [self::Succeeded, self::Failed, self::Cancelled, self::TimedOut], true);
     }
 }

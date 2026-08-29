@@ -15,4 +15,10 @@ enum ExecutionStateRejectionReason: string
     case AlreadyLeased = 'already_leased';
     case NotEligibleForLease = 'not_eligible_for_lease';
     case StaleState = 'stale_state';
+    case RetryExhausted = 'retry_exhausted';
+    case PermanentFailure = 'permanent_failure';
+    case ReconciliationRequired = 'reconciliation_required';
+    case CancellationUnauthorized = 'cancellation_unauthorized';
+    case CancellationPending = 'cancellation_pending';
+    case CancellationConflict = 'cancellation_conflict';
 }

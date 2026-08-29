@@ -23,6 +23,8 @@ final readonly class ExecutionState
         public ?string $terminalResultReference = null,
         public int $version = 0,
         public ?ExecutionStateDetails $details = null,
+        public ?RecoveryRecord $recovery = null,
+        public ?CancellationIntent $cancellation = null,
     ) {
         if ($version < 0) {
             throw new InvalidArgumentException('Execution-state version cannot be negative.');
@@ -44,6 +46,9 @@ final readonly class ExecutionState
 
     public function scheduleAttempt(AttemptId $attemptId, DateTimeImmutable $now): self
     {
+        if ($this->activeAttemptId?->value === $attemptId->value) {
+            return $this;
+        }
         if ($this->status->isTerminal()) {
             $this->reject(ExecutionStateRejectionReason::AlreadyTerminal, 'A terminal Run cannot create another Attempt.');
         }
@@ -61,6 +66,9 @@ final readonly class ExecutionState
 
     public function acquireLease(AttemptId $attemptId, LeaseId $leaseId, ExecutionNodeRef $holder, LeaseToken $token, string $acquisitionId, DateTimeImmutable $now, int $ttlSeconds): self
     {
+        if ($this->cancellation !== null) {
+            $this->reject(ExecutionStateRejectionReason::CancellationPending, 'Cancellation intent prevents new lease authority.');
+        }
         $attempt = $this->requireCurrentAttempt($attemptId);
         if ($existing = $attempt->leaseByAcquisition($acquisitionId)) {
             if ($existing->holder == $holder && hash_equals($existing->token->value, $token->value)) {
@@ -105,6 +113,9 @@ final readonly class ExecutionState
 
     public function renewLease(AttemptId $attemptId, ExecutionNodeRef $holder, LeaseToken $token, string $renewalId, DateTimeImmutable $now, int $ttlSeconds): self
     {
+        if ($this->cancellation !== null) {
+            $this->reject(ExecutionStateRejectionReason::CancellationPending, 'Cancellation intent prevents Lease renewal.');
+        }
         $attempt = $this->requireCurrentAttempt($attemptId);
         $lease = $attempt->activeLease() ?? $this->reject(ExecutionStateRejectionReason::LeaseExpired, 'The Attempt has no active Lease.');
         $renewed = $lease->renew($holder, $token, $renewalId, $now, $ttlSeconds);
@@ -150,6 +161,130 @@ final readonly class ExecutionState
         return $this->copy(activeAttemptId: $nextAttemptId, attempts: [...$this->attempts, $next], scheduledAt: $now);
     }
 
+    public function observeFailure(AttemptId $attemptId, LeaseToken $token, FailureClassification $classification, string $operationId, string $reason, DateTimeImmutable $now, RetryPolicy $policy): self
+    {
+        if ($this->recovery?->operationId === $operationId) {
+            $this->assertAttemptToken($this->findAttempt($attemptId), $token);
+            if ($this->recovery->attemptId->value === $attemptId->value && $this->recovery->classification === $classification && $this->recovery->reason === $reason) {
+                return $this;
+            }
+            $this->reject(ExecutionStateRejectionReason::InvalidTransition, 'A recovery operation identity cannot be reused with different evidence.');
+        }
+        if ($this->status->isTerminal()) {
+            $this->reject(ExecutionStateRejectionReason::AlreadyTerminal, 'A terminal Run cannot enter recovery.');
+        }
+        if ($this->cancellation !== null) {
+            $this->reject(ExecutionStateRejectionReason::CancellationPending, 'Recovery cannot replace accepted cancellation intent.');
+        }
+        $attempt = $this->requireCurrentAttempt($attemptId);
+        $lease = $this->requireAuthorizedActiveLease($attempt, $token, $now);
+        $action = $policy->decide($this, $classification);
+        $recovery = new RecoveryRecord($operationId, $attemptId, $classification, $action, $reason, $now);
+
+        if ($classification === FailureClassification::AcknowledgementUncertain) {
+            RunTransitionPolicy::assertAllowed($this->status, RunStatus::Reconciling);
+            $next = new ExecutionAttempt($attempt->id, $attempt->runId, $attempt->number, AttemptStatus::ReconciliationRequired, $attempt->createdAt, $attempt->previousAttemptId, $attempt->leases, $attempt->startedAt, failureReason: $reason);
+            return $this->replaceAttempt($next)->copy(status: RunStatus::Reconciling, recovery: $recovery);
+        }
+
+        $released = $lease->release($lease->holder, $lease->token, 'recovery:'.$operationId, $now);
+        $attemptStatus = $action === RecoveryAction::Fail ? AttemptStatus::Failed : AttemptStatus::ReconciliationRequired;
+        $next = $this->replaceLeaseValue($attempt, $released, $attemptStatus, $now, $reason);
+        if ($action === RecoveryAction::Fail) {
+            RunTransitionPolicy::assertAllowed($this->status, RunStatus::Failed);
+            return $this->replaceAttempt($next)->copy(status: RunStatus::Failed, finishedAt: $now, activeAttemptId: null, failureReason: $reason, recovery: $recovery);
+        }
+        RunTransitionPolicy::assertAllowed($this->status, RunStatus::Reconciling);
+        return $this->replaceAttempt($next)->copy(status: RunStatus::Reconciling, activeAttemptId: null, failureReason: $reason, recovery: $recovery);
+    }
+
+    public function scheduleRetry(AttemptId $nextAttemptId, DateTimeImmutable $now): self
+    {
+        foreach ($this->attempts as $attempt) {
+            if ($attempt->id->value === $nextAttemptId->value && $attempt->previousAttemptId?->value === $this->recovery?->attemptId->value) {
+                return $this;
+            }
+        }
+        if ($this->status->isTerminal()) {
+            $this->reject(ExecutionStateRejectionReason::AlreadyTerminal, 'A terminal Run cannot retry.');
+        }
+        if ($this->recovery === null || $this->recovery->action !== RecoveryAction::Retry || $this->status !== RunStatus::Reconciling) {
+            $this->reject(ExecutionStateRejectionReason::ReconciliationRequired, 'Retry requires a retryable recovery decision.');
+        }
+        if ($this->activeAttemptId !== null) {
+            $this->reject(ExecutionStateRejectionReason::InvalidTransition, 'An active Attempt prevents retry scheduling.');
+        }
+        $previous = $this->findAttempt($this->recovery->attemptId);
+        $next = new ExecutionAttempt($nextAttemptId, $this->runId, $previous->number + 1, AttemptStatus::Ready, $now, $previous->id);
+        RunTransitionPolicy::assertAllowed($this->status, RunStatus::Preparing);
+        return $this->copy(status: RunStatus::Preparing, scheduledAt: $now, activeAttemptId: $nextAttemptId, attempts: [...$this->attempts, $next]);
+    }
+
+    public function confirmAcknowledgement(AttemptId $attemptId, LeaseToken $token, DateTimeImmutable $now): self
+    {
+        $candidate = $this->currentAttempt();
+        if ($this->recovery?->action === RecoveryAction::Reconcile && $candidate?->id->value === $attemptId->value && $candidate->status === AttemptStatus::Running) {
+            $this->assertAttemptToken($candidate, $token);
+            return $this;
+        }
+        if ($this->recovery === null || $this->recovery->action !== RecoveryAction::Reconcile || $this->status !== RunStatus::Reconciling) {
+            $this->reject(ExecutionStateRejectionReason::InvalidTransition, 'The Run is not awaiting acknowledgement reconciliation.');
+        }
+        $attempt = $this->requireCurrentAttempt($attemptId);
+        $this->requireAuthorizedActiveLease($attempt, $token, $now);
+        $next = new ExecutionAttempt($attempt->id, $attempt->runId, $attempt->number, AttemptStatus::Running, $attempt->createdAt, $attempt->previousAttemptId, $attempt->leases, $attempt->startedAt ?? $now);
+        RunTransitionPolicy::assertAllowed($this->status, RunStatus::Running);
+        return $this->replaceAttempt($next)->copy(status: RunStatus::Running, startedAt: $this->startedAt ?? $now);
+    }
+
+    public function requestCancellation(string $operationId, CancellationKind $kind, string $requestedBy, string $reason, CancellationAuthorization $authorization, DateTimeImmutable $now): self
+    {
+        if (! $authorization->allowed) {
+            $this->reject(ExecutionStateRejectionReason::CancellationUnauthorized, $authorization->reason);
+        }
+        if ($this->cancellation?->operationId === $operationId) {
+            if ($this->cancellation->kind === $kind && $this->cancellation->requestedBy === $requestedBy && $this->cancellation->reason === $reason) {
+                return $this;
+            }
+            $this->reject(ExecutionStateRejectionReason::CancellationConflict, 'A cancellation identity cannot be reused with different intent.');
+        }
+        if ($this->status->isTerminal()) {
+            $this->reject(ExecutionStateRejectionReason::AlreadyTerminal, 'A terminal Run cannot accept cancellation intent.');
+        }
+        if ($this->cancellation !== null) {
+            $this->reject(ExecutionStateRejectionReason::CancellationConflict, 'The Run already has cancellation intent.');
+        }
+        $intent = new CancellationIntent($operationId, $kind, $requestedBy, $reason, CancellationStatus::Requested, $now);
+
+        if ($this->status === RunStatus::Pending || $this->activeAttemptId === null || ($this->status === RunStatus::Preparing && $this->startedAt === null)) {
+            return $this->cancelBeforeDispatch($intent, $now);
+        }
+
+        return $this->copy(cancellation: $intent);
+    }
+
+    public function confirmCancellation(AttemptId $attemptId, LeaseToken $token, string $operationId, DateTimeImmutable $now, ?string $partialResultReference = null): self
+    {
+        if ($this->cancellation === null || $this->cancellation->operationId !== $operationId) {
+            $this->reject(ExecutionStateRejectionReason::CancellationConflict, 'Cancellation confirmation does not match accepted intent.');
+        }
+        if ($this->cancellation->status === CancellationStatus::Confirmed) {
+            $this->assertAttemptToken($this->findAttempt($attemptId), $token);
+            return $this;
+        }
+        $attempt = $this->requireCurrentAttempt($attemptId);
+        $lease = $attempt->activeLease() ?? $this->reject(ExecutionStateRejectionReason::LeaseExpired, 'Cancellation confirmation requires the active Lease.');
+        if (! hash_equals($lease->token->value, $token->value)) {
+            $this->reject(ExecutionStateRejectionReason::ForeignLease, 'Cancellation confirmation has a foreign Lease token.');
+        }
+        $released = $lease->release($lease->holder, $lease->token, 'cancel:'.$operationId, $now);
+        $runStatus = $this->cancellation->kind === CancellationKind::Timeout ? RunStatus::TimedOut : RunStatus::Cancelled;
+        $attemptStatus = $this->cancellation->kind === CancellationKind::Timeout ? AttemptStatus::TimedOut : AttemptStatus::Cancelled;
+        RunTransitionPolicy::assertAllowed($this->status, $runStatus);
+        $next = $this->replaceLeaseValue($attempt, $released, $attemptStatus, $now, $this->cancellation->reason);
+        return $this->replaceAttempt($next)->copy(status: $runStatus, finishedAt: $now, activeAttemptId: null, failureReason: $this->cancellation->reason, terminalResultReference: $partialResultReference, cancellation: $this->cancellation->confirm($now, $partialResultReference));
+    }
+
     public function finish(AttemptId $attemptId, LeaseToken $token, RunStatus $terminalStatus, DateTimeImmutable $now, ?string $reason = null, ?string $resultReference = null): self
     {
         if (! $terminalStatus->isTerminal()) {
@@ -157,7 +292,11 @@ final readonly class ExecutionState
         }
         if ($this->status->isTerminal()) {
             if ($this->status === $terminalStatus && $this->failureReason === $reason && $this->terminalResultReference === $resultReference) {
-                return $this;
+                $accepted = $this->attempts === [] ? null : $this->attempts[array_key_last($this->attempts)];
+                if ($accepted?->id->value === $attemptId->value) {
+                    $this->assertAttemptToken($accepted, $token);
+                    return $this;
+                }
             }
             $this->reject(ExecutionStateRejectionReason::AlreadyTerminal, 'A terminal Run cannot be reopened or replaced.');
         }
@@ -211,6 +350,42 @@ final readonly class ExecutionState
         return $attempt;
     }
 
+    private function findAttempt(AttemptId $id): ExecutionAttempt
+    {
+        foreach ($this->attempts as $attempt) {
+            if ($attempt->id->value === $id->value) {
+                return $attempt;
+            }
+        }
+        return $this->reject(ExecutionStateRejectionReason::StaleAttempt, 'The recovery Attempt is missing.');
+    }
+
+    private function assertAttemptToken(ExecutionAttempt $attempt, LeaseToken $token): void
+    {
+        $lease = $attempt->leases === [] ? null : $attempt->leases[array_key_last($attempt->leases)];
+        if ($lease === null || ! hash_equals($lease->token->value, $token->value)) {
+            $this->reject(ExecutionStateRejectionReason::ForeignLease, 'The operation replay has a foreign Lease token.');
+        }
+    }
+
+    private function cancelBeforeDispatch(CancellationIntent $intent, DateTimeImmutable $now): self
+    {
+        $runStatus = $intent->kind === CancellationKind::Timeout ? RunStatus::TimedOut : RunStatus::Cancelled;
+        $attempts = $this->attempts;
+        if ($attempt = $this->currentAttempt()) {
+            $leases = $attempt->leases;
+            if ($lease = $attempt->activeLease()) {
+                $released = $lease->release($lease->holder, $lease->token, 'cancel:'.$intent->operationId, $now);
+                $leases = array_map(static fn (ExecutionLease $item): ExecutionLease => $item->id->value === $released->id->value ? $released : $item, $leases);
+            }
+            $attemptStatus = $intent->kind === CancellationKind::Timeout ? AttemptStatus::TimedOut : AttemptStatus::Cancelled;
+            $replacement = new ExecutionAttempt($attempt->id, $attempt->runId, $attempt->number, $attemptStatus, $attempt->createdAt, $attempt->previousAttemptId, $leases, $attempt->startedAt, $now, $intent->reason);
+            $attempts = array_map(static fn (ExecutionAttempt $item): ExecutionAttempt => $item->id->value === $replacement->id->value ? $replacement : $item, $attempts);
+        }
+        RunTransitionPolicy::assertAllowed($this->status, $runStatus);
+        return $this->copy(status: $runStatus, finishedAt: $now, activeAttemptId: null, attempts: $attempts, failureReason: $intent->reason, cancellation: $intent->confirm($now, null));
+    }
+
     private function requireAuthorizedActiveLease(ExecutionAttempt $attempt, LeaseToken $token, DateTimeImmutable $now): ExecutionLease
     {
         $lease = $attempt->activeLease() ?? $this->reject(ExecutionStateRejectionReason::LeaseExpired, 'The Attempt has no active Lease.');
@@ -252,9 +427,9 @@ final readonly class ExecutionState
     }
 
     /** @param list<ExecutionAttempt>|null $attempts */
-    private function copy(?RunStatus $status = null, ?DateTimeImmutable $scheduledAt = null, ?DateTimeImmutable $startedAt = null, ?DateTimeImmutable $finishedAt = null, AttemptId|false|null $activeAttemptId = false, ?array $attempts = null, ?string $failureReason = null, ?string $terminalResultReference = null, ?ExecutionStateDetails $details = null): self
+    private function copy(?RunStatus $status = null, ?DateTimeImmutable $scheduledAt = null, ?DateTimeImmutable $startedAt = null, ?DateTimeImmutable $finishedAt = null, AttemptId|false|null $activeAttemptId = false, ?array $attempts = null, ?string $failureReason = null, ?string $terminalResultReference = null, ?ExecutionStateDetails $details = null, ?RecoveryRecord $recovery = null, ?CancellationIntent $cancellation = null): self
     {
-        return new self($this->runId, $status ?? $this->status, $this->createdAt, $scheduledAt ?? $this->scheduledAt, $startedAt ?? $this->startedAt, $finishedAt ?? $this->finishedAt, $activeAttemptId === false ? $this->activeAttemptId : $activeAttemptId, $attempts ?? $this->attempts, $failureReason ?? $this->failureReason, $terminalResultReference ?? $this->terminalResultReference, $this->version + 1, $details ?? $this->details);
+        return new self($this->runId, $status ?? $this->status, $this->createdAt, $scheduledAt ?? $this->scheduledAt, $startedAt ?? $this->startedAt, $finishedAt ?? $this->finishedAt, $activeAttemptId === false ? $this->activeAttemptId : $activeAttemptId, $attempts ?? $this->attempts, $failureReason ?? $this->failureReason, $terminalResultReference ?? $this->terminalResultReference, $this->version + 1, $details ?? $this->details, $recovery ?? $this->recovery, $cancellation ?? $this->cancellation);
     }
 
     /** @return never */

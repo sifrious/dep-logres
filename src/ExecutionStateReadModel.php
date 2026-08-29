@@ -19,6 +19,8 @@ final readonly class ExecutionStateReadModel
         public array $attempts,
         public int $version,
         public ?array $details,
+        public ?array $recovery,
+        public ?array $cancellation,
     ) {}
 
     public static function fromState(ExecutionState $state): self
@@ -58,6 +60,24 @@ final readonly class ExecutionStateReadModel
                 'runtime_invocation_id' => $state->details->runtimeInvocationId,
                 'target_reference' => $state->details->targetReference,
                 'updated_at' => $state->details->updatedAt?->format(DATE_ATOM),
+            ],
+            $state->recovery === null ? null : [
+                'operation_id' => $state->recovery->operationId,
+                'attempt_id' => $state->recovery->attemptId->value,
+                'classification' => $state->recovery->classification->value,
+                'action' => $state->recovery->action->value,
+                'reason' => $state->recovery->reason,
+                'observed_at' => $state->recovery->observedAt->format(DATE_ATOM),
+            ],
+            $state->cancellation === null ? null : [
+                'operation_id' => $state->cancellation->operationId,
+                'kind' => $state->cancellation->kind->value,
+                'requested_by' => $state->cancellation->requestedBy,
+                'reason' => $state->cancellation->reason,
+                'status' => $state->cancellation->status->value,
+                'requested_at' => $state->cancellation->requestedAt->format(DATE_ATOM),
+                'confirmed_at' => $state->cancellation->confirmedAt?->format(DATE_ATOM),
+                'partial_result_reference' => $state->cancellation->partialResultReference,
             ],
         );
     }

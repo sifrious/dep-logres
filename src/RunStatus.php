@@ -9,6 +9,7 @@ enum RunStatus: string
     case Pending = 'pending';
     case Preparing = 'preparing';
     case Running = 'running';
+    case Reconciling = 'reconciling';
     case NeedsInput = 'needs_input';
     case Succeeded = 'succeeded';
     case Failed = 'failed';
