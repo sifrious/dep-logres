@@ -37,6 +37,10 @@ Logres selects one concrete execution target from provider facts supplied throug
 
 Logres creates a stable local `Run` and immutable provenance snapshot before dispatch. The package binds the first matching provider acknowledgement, treats duplicates as idempotent, rejects conflicting or cross-Run provider identities, and models uncertain acknowledgement and explicit reconciliation. Hosts provide provider lookup and persistence adapters; storage must enforce unique local and provider execution identities atomically.
 
+## Current execution state
+
+Logres is the authority for mutable current execution state. `ExecutionState` separates a stable Run, each concrete `ExecutionAttempt`, and each bounded `ExecutionLease`; `ExecutionStateReadModel` exposes the current Attempt, lease holder and expiry, terminal result reference, failure reason, and complete Attempt lineage without requiring event replay. See [docs/execution-state.md](docs/execution-state.md) for the state machine, lease lifecycle, ownership boundary, and host persistence contract.
+
 ## Dispatch authorization
 
 Logres requires an explicit, current grant before a Run can enter dispatch. The policy matches canonical repository identity, workspace authority and normalized contained path, selected target, environment, runtime, frozen prompt permissions, actor, grant validity, and target-observation freshness. An allowed decision freezes the approved context on the Run. Capabilities describe what a target can do; only a grant describes what it may do.
