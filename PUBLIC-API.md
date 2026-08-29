@@ -130,6 +130,15 @@ The package is pre-release. These names define the current consumer surface; sem
 - `PostflightResultAssembler`
 - `TurnRunner`
 
+## Runner boundary
+
+- `RunnerIdentity`
+- `PlatformIdentity`
+- `CapabilitySnapshot`
+- `RunnerAvailability`
+- `CurrentWorkload`
+- `RunnerDescriptor`
+
 ## Harness substitution
 
 - `HarnessInterface`
