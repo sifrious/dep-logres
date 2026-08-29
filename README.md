@@ -44,3 +44,7 @@ Logres is the authority for mutable current execution state. `ExecutionState` se
 ## Dispatch authorization
 
 Logres requires an explicit, current grant before a Run can enter dispatch. The policy matches canonical repository identity, workspace authority and normalized contained path, selected target, environment, runtime, frozen prompt permissions, actor, grant validity, and target-observation freshness. An allowed decision freezes the approved context on the Run. Capabilities describe what a target can do; only a grant describes what it may do.
+
+## Runner execution node
+
+Logres owns the provider-neutral machine-side runner boundary: immutable envelope acceptance, canonical lifecycle/lease gating, normalized events and terminal results, and local duplicate/restart reconciliation. Runtime invocation crosses the `RunnerRuntime` port to Wardrobe; workspace observations come from Stacks. See [docs/runner-boundary.md](docs/runner-boundary.md).

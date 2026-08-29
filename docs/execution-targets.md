@@ -6,19 +6,21 @@ Every dispatched task must refer to a concrete, persisted target snapshot. A tar
 
 1. The host maps a canonical task to `ExecutionTargetRequirements`.
 2. A provider adapter returns factual `ExecutionTargetCandidate` values through `ExecutionTargetCatalog`.
-3. `ExecutionTargetSelector` narrows candidates by provider, workspace authority, repository identity, agent adapter, capabilities, operational state, and explicit authorization.
-4. Automatic selection succeeds only when one eligible candidate remains. Manual selection applies the same eligibility and authorization rules to the requested target.
-5. The host persists the immutable `ExecutionTargetSelection` through `ExecutionTargetStore` before dispatch.
-6. Hosts render `ExecutionTargetReadModel` and `ExecutionTargetCatalogReadModel`; they do not recompute package rules.
+3. `ExecutionTargetSelector` evaluates every candidate by provider, workspace authority, repository identity, execution class, capabilities, operational state, snapshot freshness, resource availability, and explicit authorization. Runtime-adapter selection remains a later Wardrobe concern.
+4. Eligible candidates are sorted by requested preference, execution-class policy order, and stable target identity. The selector never depends on inventory order.
+5. A decision freezes every candidate evaluation, its rejection reasons and policy checks, the policy version, the automatic winner, any validated override, and the effective target.
+6. The host persists the immutable `ExecutionTargetSelection` through `ExecutionTargetStore` before dispatch.
+7. Hosts render `ExecutionTargetReadModel` and `ExecutionTargetCatalogReadModel`; they do not recompute package rules.
+
+No eligible candidate returns `NeedsTarget` with either `NO_TARGETS_DISCOVERED` or `NO_ELIGIBLE_TARGET`. Candidate-level failures retain specific codes such as `TARGET_STALE`, `TARGET_UNAUTHORIZED`, `TARGET_CAPABILITY_MISMATCH`, and `TARGET_RESOURCE_EXHAUSTED`. No fallback is inferred.
 
 ## Outcomes
 
-- `target_unavailable`: no matching target exists or every capable target is unavailable, degraded, unhealthy, or busy.
-- `target_incapable`: contextual targets exist but none satisfies the required adapter and capabilities.
-- `target_unauthorized`: operational targets exist but none is explicitly authorized for the target, workspace, and repository.
-- `target_ambiguous`: automatic selection has more than one eligible target.
+- `Selected`: the persisted decision contains the automatic and effective target plus the full audit.
+- `NeedsTarget`: no candidate passes every check; dispatch must not begin.
+- `Rejected`: a requested override is unknown or ineligible and fails closed.
 
-A manual override returns the same incapable, unavailable, or unauthorized result as automatic selection because it passes through the same policy.
+A manual override passes through the same checks as automatic selection. It never removes the automatic winner from history.
 
 ## Ownership Boundary
 

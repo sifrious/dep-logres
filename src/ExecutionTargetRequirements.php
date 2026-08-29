@@ -17,8 +17,11 @@ final readonly class ExecutionTargetRequirements
         public string $repositoryIdentity,
         public string $agentAdapter,
         array $capabilities,
+        public array $allowedExecutionClasses = ['local', 'managed-cloud', 'customer-owned', 'provider-hosted'],
+        public int $maximumSnapshotAgeSeconds = 300,
+        public ?string $preferredTargetId = null,
     ) {
-        if (trim($provider) === '' || trim($workspaceAuthority) === '' || trim($repositoryIdentity) === '' || trim($agentAdapter) === '' || ! self::hasCapabilities($capabilities)) {
+        if (trim($provider) === '' || trim($workspaceAuthority) === '' || trim($repositoryIdentity) === '' || trim($agentAdapter) === '' || ! self::hasCapabilities($capabilities) || $allowedExecutionClasses === [] || $maximumSnapshotAgeSeconds < 0) {
             throw new InvalidArgumentException('Target requirements need provider, workspace authority, repository identity, agent adapter, and capabilities.');
         }
 

@@ -49,7 +49,8 @@ final class ExecutionTargetSelectorTest extends TestCase
             self::SELECTED_AT,
         );
 
-        self::assertSame('target_incapable', $result->failures[0]->code);
+        self::assertSame('NO_ELIGIBLE_TARGET', $result->failures[0]->code);
+        self::assertSame('TARGET_CAPABILITY_MISMATCH', $result->failures[0]->candidateEvaluations[0]->rejectionReasons[0]['code']);
     }
 
     #[Test]
@@ -62,7 +63,7 @@ final class ExecutionTargetSelectorTest extends TestCase
             self::SELECTED_AT,
         );
 
-        self::assertSame('target_unavailable', $result->failures[0]->code);
+        self::assertSame('NO_TARGETS_DISCOVERED', $result->failures[0]->code);
     }
 
     #[Test]
@@ -84,8 +85,8 @@ final class ExecutionTargetSelectorTest extends TestCase
             self::SELECTED_AT,
         );
 
-        self::assertSame('target_unavailable', $busy->failures[0]->code);
-        self::assertSame('target_unavailable', $degraded->failures[0]->code);
+        self::assertSame('NO_ELIGIBLE_TARGET', $busy->failures[0]->code);
+        self::assertSame('NO_ELIGIBLE_TARGET', $degraded->failures[0]->code);
     }
 
     #[Test]
@@ -98,11 +99,11 @@ final class ExecutionTargetSelectorTest extends TestCase
             self::SELECTED_AT,
         );
 
-        self::assertSame('target_unauthorized', $result->failures[0]->code);
+        self::assertSame('NO_ELIGIBLE_TARGET', $result->failures[0]->code);
     }
 
     #[Test]
-    public function multiple_equally_eligible_targets_are_ambiguous(): void
+    public function multiple_equally_eligible_targets_use_stable_identity_tie_break(): void
     {
         $result = (new ExecutionTargetSelector)->select(
             ExecutionTargetFixtures::requirements(),
@@ -111,7 +112,8 @@ final class ExecutionTargetSelectorTest extends TestCase
             self::SELECTED_AT,
         );
 
-        self::assertSame('target_ambiguous', $result->failures[0]->code);
+        self::assertSame('target:orbs:orb-a', $result->selection?->target->id->value);
+        self::assertNotNull($result->selection?->tieBreakReason);
     }
 
     #[Test]
@@ -142,7 +144,7 @@ final class ExecutionTargetSelectorTest extends TestCase
             new ExecutionTargetId('target:orbs:orb-b'),
         );
 
-        self::assertSame('target_unauthorized', $result->failures[0]->code);
+        self::assertSame('TARGET_OVERRIDE_REJECTED', $result->failures[0]->code);
     }
 
     #[Test]
@@ -181,5 +183,63 @@ final class ExecutionTargetSelectorTest extends TestCase
 
         self::assertSame(['available', 'busy', 'offline', 'degraded'], array_column($model->targets, 'availability'));
         self::assertSame('task:accepted-fixture:define', $model->targets[1]['current_task_id']);
+    }
+
+    #[Test]
+    public function fixed_inputs_are_independent_of_candidate_order(): void
+    {
+        $selector = new ExecutionTargetSelector;
+        $requirements = ExecutionTargetFixtures::requirements();
+        $authorization = ExecutionTargetFixtures::authorization(['target:orbs:orb-a', 'target:orbs:orb-b']);
+        $a = ExecutionTargetFixtures::candidate('orb-a');
+        $b = ExecutionTargetFixtures::candidate('orb-b');
+
+        $first = $selector->select($requirements, [$b, $a], $authorization, self::SELECTED_AT);
+        $second = $selector->select($requirements, [$a, $b], $authorization, self::SELECTED_AT);
+
+        self::assertSame($first->selection?->target->id->value, $second->selection?->target->id->value);
+        self::assertSame(
+            array_map(static fn ($evaluation) => [$evaluation->candidate->id->value, $evaluation->rankKey], $first->selection?->candidateEvaluations ?? []),
+            array_map(static fn ($evaluation) => [$evaluation->candidate->id->value, $evaluation->rankKey], $second->selection?->candidateEvaluations ?? []),
+        );
+    }
+
+    #[Test]
+    public function stale_snapshot_resource_exhaustion_and_forbidden_class_are_explicit(): void
+    {
+        $requirements = new \Sifrious\Logres\ExecutionTargetRequirements(
+            ExecutionTargetFixtures::requirements()->taskId, 'orbs', 'workspace:personal', 'repository:atlas', 'codex', ['git', 'php'], ['customer-owned'], 30,
+        );
+        $candidate = new \Sifrious\Logres\ExecutionTargetCandidate(
+            new ExecutionTargetId('target:orbs:orb-a'), 'orbs', TargetAvailability::Available, TargetHealth::Healthy,
+            'debian-12:a1.small', 'production', 'workspace:personal', 'repository:atlas', ['amp'], ['git', 'php'], null,
+            '2026-08-28T04:29:00Z', executionClass: 'managed-cloud', availableSlots: 0,
+        );
+        $result = (new ExecutionTargetSelector)->select($requirements, [$candidate], ExecutionTargetFixtures::authorization(), self::SELECTED_AT);
+        $codes = array_column($result->failures[0]->candidateEvaluations[0]->rejectionReasons, 'code');
+
+        self::assertContains('TARGET_STALE', $codes);
+        self::assertContains('TARGET_RESOURCE_EXHAUSTED', $codes);
+        self::assertContains('TARGET_EXECUTION_CLASS_FORBIDDEN', $codes);
+    }
+
+    #[Test]
+    public function preference_and_override_preserve_automatic_and_effective_targets(): void
+    {
+        $base = ExecutionTargetFixtures::requirements();
+        $requirements = new \Sifrious\Logres\ExecutionTargetRequirements($base->taskId, 'orbs', 'workspace:personal', 'repository:atlas', 'codex', ['git', 'php'], preferredTargetId: 'target:orbs:orb-b');
+        $result = (new ExecutionTargetSelector)->select(
+            $requirements,
+            [ExecutionTargetFixtures::candidate('orb-a'), ExecutionTargetFixtures::candidate('orb-b')],
+            ExecutionTargetFixtures::authorization(['target:orbs:orb-a', 'target:orbs:orb-b']),
+            self::SELECTED_AT,
+            new ExecutionTargetId('target:orbs:orb-a'),
+            'Use the local reserved runner.',
+        );
+
+        self::assertSame('target:orbs:orb-b', $result->selection?->automaticTarget->id->value);
+        self::assertSame('target:orbs:orb-a', $result->selection?->target->id->value);
+        self::assertSame('user:mary', $result->selection?->override['actor']);
+        self::assertSame('Use the local reserved runner.', $result->selection?->override['reason']);
     }
 }

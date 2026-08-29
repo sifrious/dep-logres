@@ -18,7 +18,7 @@ final class PackageBoundaryTest extends TestCase
             flags: JSON_THROW_ON_ERROR,
         );
 
-        self::assertSame(['php' => '^8.3'], $manifest['require']);
+        self::assertSame(['php' => '^8.3', 'sifrious/wardrobe' => 'dev-main'], $manifest['require']);
     }
 
     #[Test]
@@ -33,5 +33,22 @@ final class PackageBoundaryTest extends TestCase
             $name = pathinfo($sourceFile, PATHINFO_FILENAME);
             self::assertStringContainsString("`{$name}`", $api, "{$name} is missing from PUBLIC-API.md.");
         }
+    }
+
+    #[Test]
+    public function runner_orchestration_has_no_framework_ui_or_provider_sdk_dependency(): void
+    {
+        $runnerSources = implode("\n", array_map(
+            static fn (string $path): string => file_get_contents($path),
+            glob(dirname(__DIR__).'/src/*Runner*.php') ?: [],
+        ));
+
+        foreach (['Illuminate\\', 'Livewire\\', 'Anthropic\\', 'OpenAI\\', 'Laravel\\'] as $forbiddenNamespace) {
+            self::assertStringNotContainsString($forbiddenNamespace, $runnerSources);
+        }
+
+        self::assertStringNotContainsString('Http\\Controllers', $runnerSources);
+        self::assertStringNotContainsString('shell_exec(', $runnerSources);
+        self::assertStringNotContainsString('proc_open(', $runnerSources);
     }
 }

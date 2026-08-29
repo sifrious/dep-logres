@@ -5,7 +5,8 @@
     "license": "proprietary",
     "type": "library",
     "require": {
-        "php": "^8.3"
+        "php": "^8.3",
+        "sifrious/wardrobe": "dev-main"
     },
     "require-dev": {
         "phpstan/phpstan": "^2.2",
@@ -21,6 +22,12 @@
             "Sifrious\\Logres\\Tests\\": "tests/"
         }
     },
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "git@github.com-sifrious:sifrious/dep-wardrobe.git"
+        }
+    ],
     "scripts": {
         "analyse": "phpstan analyse --no-progress",
         "check": [
