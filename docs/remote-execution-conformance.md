@@ -2,7 +2,7 @@
 
 `RemoteExecutionLifecycleConformanceTest` composes the package-owned current-state, Attempt, Lease, retry/reconciliation, cancellation, timeout, persistence, finalization, and terminal invariants. It is deliberately a consumer of those contracts, not a second lifecycle implementation.
 
-The suite proves a transient failure produces a linked second Attempt and one terminal Run; stale callbacks and terminal retry cannot reopen it; lost acknowledgement survives reload and resumes the same Attempt/Lease without duplicate dispatch; active cancellation preserves partial evidence; and runtime cancellation remains independent from verification/finalization disposition.
+The suite proves an authorized selected target flows through a bounded Lease, mandatory preflight, one provider invocation, independent successful verification, and one terminal Run. It also proves a transient failure produces a linked second Attempt; stale callbacks and terminal retry cannot reopen it; lost acknowledgement survives reload and resumes the same Attempt/Lease without duplicate dispatch; active cancellation preserves partial evidence; and runtime cancellation remains independent from verification/finalization disposition.
 
 Supporting suites provide the rest of the package matrix:
 
