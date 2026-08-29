@@ -36,6 +36,7 @@ The package is pre-release. These names define the current consumer surface; sem
 - `TaskPlanningResult`
 - `TaskPlanner`
 - `DeterministicTaskPlanner`
+- `DirectTaskPlanner`
 - `TaskPlanReadModel`
 - `TaskPlanStore`
 - `InvalidTaskTransition`

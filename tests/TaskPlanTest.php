@@ -7,6 +7,7 @@ namespace Sifrious\Logres\Tests;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Sifrious\Logres\DeterministicTaskPlanner;
+use Sifrious\Logres\DirectTaskPlanner;
 use Sifrious\Logres\InvalidTaskTransition;
 use Sifrious\Logres\TaskId;
 use Sifrious\Logres\TaskAction;
@@ -136,6 +137,26 @@ final class TaskPlanTest extends TestCase
         self::assertNotNull($first);
 
         $second = $planner->replan($request, $first)->plan;
+
+        self::assertSame('plan:accepted-fixture:v2', $second?->id->value);
+        self::assertSame('plan:accepted-fixture:v1', $second?->replansFrom?->value);
+    }
+
+    #[Test]
+    public function direct_planner_preserves_one_request_as_one_runnable_task(): void
+    {
+        $planner = new DirectTaskPlanner(new TaskPlanValidator);
+        $request = ExecutionRequestFixtures::accepted();
+        $first = $planner->plan($request);
+
+        self::assertTrue($first->acceptedSuccessfully());
+        self::assertCount(1, $first->plan?->tasks ?? []);
+        self::assertSame('task:accepted-fixture:execute', $first->plan?->tasks[0]->id->value);
+        self::assertSame($request->originalPrompt, $first->plan?->tasks[0]->objective);
+        self::assertSame($request->desiredResult, $first->plan?->tasks[0]->expectedOutput);
+        self::assertSame(TaskReadiness::Ready, $first->plan?->readiness($first->plan->tasks[0]->id));
+
+        $second = $planner->replan($request, $first->plan)->plan;
 
         self::assertSame('plan:accepted-fixture:v2', $second?->id->value);
         self::assertSame('plan:accepted-fixture:v1', $second?->replansFrom?->value);
