@@ -123,7 +123,11 @@ The package is pre-release. These names define the current consumer surface; sem
 - `LeaseStatus`
 - `ExecutionNodeRef`
 - `RunResult`
+- `RunResultStore`
+- `RunResultHistorian`
 - `RunResultReadModel`
+- `VerificationStatus`
+- `FinalizationStatus`
 - `RunEvidence`
 - `PreflightSnapshot`
 - `PostflightReport`

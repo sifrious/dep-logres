@@ -21,6 +21,8 @@ final readonly class RunResult
         array $evidence = [],
         public ?string $agentClaim = null,
         public ?string $observedOutcome = null,
+        public VerificationStatus $verificationStatus = VerificationStatus::Incomplete,
+        public FinalizationStatus $finalizationStatus = FinalizationStatus::Incomplete,
     ) {
         if (! $this->status->isTerminal()) {
             throw new InvalidArgumentException('A run result requires a terminal status.');
@@ -60,5 +62,29 @@ final readonly class RunResult
     public static function cancelled(string $stdout = '', string $stderr = '', ?string $reason = null): self
     {
         return new self(RunStatus::Cancelled, $stdout, $stderr, null, null, $reason);
+    }
+
+    public function isVerifiedSuccess(): bool
+    {
+        return $this->status === RunStatus::Succeeded
+            && $this->verificationStatus === VerificationStatus::Succeeded
+            && $this->finalizationStatus === FinalizationStatus::Complete;
+    }
+
+    public function finalizationIncomplete(string $reason): self
+    {
+        return new self(
+            $this->status,
+            $this->stdout,
+            $this->stderr,
+            $this->exitCode,
+            $this->signal,
+            $this->reason,
+            [...$this->evidence, new RunEvidence('finalization.failure', $reason, gmdate('c'))],
+            $this->agentClaim,
+            $this->observedOutcome,
+            VerificationStatus::Incomplete,
+            FinalizationStatus::Incomplete,
+        );
     }
 }

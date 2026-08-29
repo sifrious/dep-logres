@@ -13,6 +13,8 @@ final readonly class RunResultReadModel
         public string $stderr,
         public ?int $exitCode,
         public ?string $reason,
+        public string $verificationStatus,
+        public string $finalizationStatus,
     ) {}
 
     public static function fromResult(RunResult $result): self
@@ -35,6 +37,8 @@ final readonly class RunResultReadModel
             stderr: $result->stderr,
             exitCode: $result->exitCode,
             reason: $result->reason,
+            verificationStatus: $result->verificationStatus->value,
+            finalizationStatus: $result->finalizationStatus->value,
         );
     }
 }
