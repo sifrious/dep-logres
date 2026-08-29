@@ -31,7 +31,7 @@ Logres compiles one deterministic, immutable execution envelope for a canonical 
 
 ## Execution targets
 
-Logres selects one concrete execution target from provider facts supplied through an `ExecutionTargetCatalog`. The package owns requirements, eligibility, explicit authorization, capability matching, health interpretation, automatic and manual selection, immutable target snapshots, failure reasons, and presentation-neutral read models. Hosts own provider authentication, inventory adapters, persistence adapters, and delivery. A task cannot be dispatched from an absent, ambiguous, unavailable, incapable, or unauthorized selection.
+Logres selects one concrete execution target from provider facts supplied through an `ExecutionTargetCatalog`. The package owns versioned requirements, per-candidate policy checks and rejection reasons, explicit authorization, capability/freshness/workload interpretation, deterministic ranking, validated manual overrides, immutable selection provenance, and presentation-neutral read models. Hosts own provider authentication, inventory adapters, persistence adapters, and delivery. A task cannot be dispatched without one persisted eligible selection.
 
 ## Run identity and provider acknowledgement
 
