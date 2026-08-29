@@ -9,6 +9,7 @@ use InvalidArgumentException;
 final readonly class TurnRunner
 {
     public function __construct(
+        private InvariantPreflight $invariantPreflight,
         private BeforeTurnPipeline $before,
         private AfterTurnPipeline $after,
     ) {}
@@ -23,6 +24,7 @@ final readonly class TurnRunner
             throw new InvalidArgumentException("Run request targets {$request->harnessId}, not {$harness->id()}.");
         }
 
+        $context = $this->invariantPreflight->process($request, $context);
         $context = $this->before->process($request, $context);
         $observer->contextResolved($context);
 

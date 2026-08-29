@@ -19,6 +19,9 @@ use Sifrious\Logres\HarnessCapability;
 use Sifrious\Logres\HarnessHandle;
 use Sifrious\Logres\HarnessProbe;
 use Sifrious\Logres\HarnessStatus;
+use Sifrious\Logres\InvariantBeforeTurnHandler;
+use Sifrious\Logres\InvariantPreflight;
+use Sifrious\Logres\InvariantPreflightPhase;
 use Sifrious\Logres\RunRequest;
 use Sifrious\Logres\RunResult;
 use Sifrious\Logres\Turn;
@@ -29,6 +32,36 @@ use UnexpectedValueException;
 final class TurnRunnerTest extends TestCase
 {
     #[Test]
+    public function a_failing_invariant_keeps_the_provider_call_count_at_zero(): void
+    {
+        $sequence = new Sequence;
+        $runner = new TurnRunner(
+            new InvariantPreflight([
+                new SequencedInvariantHandler(InvariantPreflightPhase::Authorization, $sequence),
+                new ThrowingInvariantHandler(InvariantPreflightPhase::Workspace, $sequence),
+                new SequencedInvariantHandler(InvariantPreflightPhase::Provenance, $sequence),
+            ]),
+            new BeforeTurnPipeline,
+            new AfterTurnPipeline,
+        );
+
+        try {
+            $runner->run(
+                new RunRequest(new Turn('exact prompt'), 'fixture', 'workspace'),
+                FixtureContext::make(),
+                new SequencedHarness($sequence),
+                new RecordingExecutionObserver($sequence),
+            );
+            self::fail('The failing workspace invariant should stop execution.');
+        } catch (UnexpectedValueException $exception) {
+            self::assertSame('workspace rejected', $exception->getMessage());
+        }
+
+        self::assertSame(['invariant:Authorization', 'invariant:Workspace'], $sequence->events);
+        self::assertNotContains('start', $sequence->events);
+    }
+
+    #[Test]
     public function it_runs_the_kernel_in_exact_order(): void
     {
         $sequence = new Sequence;
@@ -37,6 +70,11 @@ final class TurnRunnerTest extends TestCase
         $observer = new RecordingExecutionObserver($sequence);
         $harness = new SequencedHarness($sequence);
         $runner = new TurnRunner(
+            new InvariantPreflight([
+                new SequencedInvariantHandler(InvariantPreflightPhase::Provenance, $sequence),
+                new SequencedInvariantHandler(InvariantPreflightPhase::Authorization, $sequence),
+                new SequencedInvariantHandler(InvariantPreflightPhase::Workspace, $sequence),
+            ]),
             new BeforeTurnPipeline([new SequencedBeforeHandler($sequence)]),
             new AfterTurnPipeline([new SequencedAfterHandler($sequence)]),
         );
@@ -45,6 +83,9 @@ final class TurnRunnerTest extends TestCase
 
         self::assertEquals(RunResult::succeeded('complete'), $result);
         self::assertSame([
+            'invariant:Authorization',
+            'invariant:Workspace',
+            'invariant:Provenance',
             'before',
             'context',
             'start',
@@ -56,6 +97,46 @@ final class TurnRunnerTest extends TestCase
             'status:succeeded',
             'after',
         ], $sequence->events);
+    }
+}
+
+final readonly class ThrowingInvariantHandler implements InvariantBeforeTurnHandler
+{
+    public function __construct(
+        private InvariantPreflightPhase $invariantPhase,
+        private Sequence $sequence,
+    ) {}
+
+    public function phase(): InvariantPreflightPhase
+    {
+        return $this->invariantPhase;
+    }
+
+    public function handle(RunRequest $request, TurnContext $context): TurnContext
+    {
+        $this->sequence->events[] = "invariant:{$this->invariantPhase->name}";
+
+        throw new UnexpectedValueException('workspace rejected');
+    }
+}
+
+final readonly class SequencedInvariantHandler implements InvariantBeforeTurnHandler
+{
+    public function __construct(
+        private InvariantPreflightPhase $invariantPhase,
+        private Sequence $sequence,
+    ) {}
+
+    public function phase(): InvariantPreflightPhase
+    {
+        return $this->invariantPhase;
+    }
+
+    public function handle(RunRequest $request, TurnContext $context): TurnContext
+    {
+        $this->sequence->events[] = "invariant:{$this->invariantPhase->name}";
+
+        return $context;
     }
 }
 
