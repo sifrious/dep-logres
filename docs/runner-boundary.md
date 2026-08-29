@@ -18,3 +18,29 @@ Arrays in a capability snapshot are non-empty, de-duplicated, and sorted so equi
 Logres owns the compatibility contracts and their validation. Burdgeon owns discovery, heartbeat integration, persistence, configuration, and pre-dispatch use of runner observations. Wardrobe owns runtime adapter profiles; descriptors reference adapter identities rather than duplicating their definitions. Stacks supplies stable workspace and grant identities.
 
 The boundary deliberately contains no HTTP, queue, UI, framework, provider-SDK, or process-launching dependency.
+
+## Envelope acceptance and runtime invocation
+
+`ExecutionRunner` is the provider-neutral machine-side orchestration boundary. It parses an immutable `ExecutionEnvelope`, verifies protocol support and authenticity, rejects expired or wrongly addressed work, checks the stable grant and Stacks workspace/repository observation, confirms runtime and capability availability, and asks the canonical Logres lifecycle gate to validate the active Run, Attempt, and Lease.
+
+Expected failures return `RunnerRejectionReason`; rejected work never invokes the runtime. Accepted work becomes a `RuntimeRequest` through `RunnerRuntime`. A Burdgeon runner process binds that port to Wardrobe. Logres neither imports provider SDKs nor branches on Codex, Claude, Amp, or any other provider.
+
+## Events and terminal outcomes
+
+Every `RunnerEvent` contains stable Run, Attempt, Lease, Runner, event, sequence, and timestamp identities. Its deterministic event ID permits safe redelivery. The normalized vocabulary includes acceptance, start/running/status, output, questions/intervention, artifacts, warnings/failures, and one typed terminal result.
+
+`RunnerTerminalResult` distinguishes success, failure, cancellation, timeout, and rejection. Provider prose is evidence, not the authority that decides success.
+
+## Restart and duplicate delivery
+
+`RunnerLocalStateStore` durably records `received`, `accepted`, `invoking`, `reporting`, and `terminal`, keyed by immutable Run + Attempt + Lease identity. A repeated terminal delivery returns the retained terminal result. A restart that finds accepted, invoking, or reporting work fails closed for reconciliation and cannot silently invoke Wardrobe again. The terminal result is stored before reporting, so loss of a network acknowledgement is never permission to execute twice.
+
+Local runner state exists only for reconciliation and duplicate prevention. `ExecutionStateRunnerLifecycle` consumes Logres's canonical state and lease authority; it does not create a competing lifecycle.
+
+## Outbound-only hosting
+
+The runner contract has no listener, HTTP controller, route, queue worker, or public-port requirement. Hosts may receive work through authenticated long polling, outbound WebSockets, or future outbound streams.
+
+## What is not a runner
+
+A runner is not a UI session, Laravel queue worker, Wardrobe adapter, provider SDK, Logres state machine, repository, arbitrary shell script, portable Orbis agent definition, or Amp Orb specifically.

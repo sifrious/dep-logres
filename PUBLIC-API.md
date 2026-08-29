@@ -141,6 +141,29 @@ The package is pre-release. These names define the current consumer surface; sem
 - `RunnerCompatibilityRequirements`
 - `RunnerCompatibilityFailure`
 - `RunnerCompatibility`
+- `ExecutionEnvelope`
+- `EnvelopeAuthenticator`
+- `RunnerAuthorization`
+- `RunnerWorkspace`
+- `RunnerLifecycle`
+- `ExecutionStateRunnerLifecycle`
+- `RunnerRejectionReason`
+- `RunnerAcceptance`
+- `RuntimeRequest`
+- `RuntimeResult`
+- `RunnerRuntime`
+- `RunnerRuntimeObserver`
+- `RunnerEventType`
+- `RunnerEvent`
+- `RunnerEventSink`
+- `RunnerTerminalStatus`
+- `RunnerTerminalResult`
+- `RunnerLocalStage`
+- `RunnerLocalRecord`
+- `RunnerLocalStateStore`
+- `RunnerExecutionOutcome`
+- `SequencedRunnerObserver`
+- `ExecutionRunner`
 
 ## Harness substitution
 
