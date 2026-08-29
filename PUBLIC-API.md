@@ -109,6 +109,9 @@ The package is pre-release. These names define the current consumer surface; sem
 - `InvalidRunTransition`
 - `RunResult`
 - `RunEvidence`
+- `PreflightSnapshot`
+- `PostflightReport`
+- `PostflightResultAssembler`
 - `TurnRunner`
 
 ## Harness substitution

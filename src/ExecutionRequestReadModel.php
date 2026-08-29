@@ -19,6 +19,7 @@ final readonly class ExecutionRequestReadModel
         public string $channel,
         public string $relationship,
         public ?string $parentRequestId,
+        public ?array $origin = null,
     ) {}
 
     public static function fromRequest(ExecutionRequest $request): self
@@ -52,6 +53,13 @@ final readonly class ExecutionRequestReadModel
             channel: $request->channel->value,
             relationship: $request->relationship->value,
             parentRequestId: $request->parentRequestId?->value,
+            origin: $request->origin === null ? null : [
+                'user_input' => $request->origin->userInputReference,
+                'intent' => $request->origin->intentReference,
+                'conversation' => $request->origin->conversationReference,
+                'plan' => $request->origin->planReference,
+                'plan_step' => $request->origin->planStepReference,
+            ],
         );
     }
 }
