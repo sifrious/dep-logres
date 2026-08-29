@@ -122,6 +122,14 @@ The package is pre-release. These names define the current consumer surface; sem
 - `LeaseToken`
 - `LeaseStatus`
 - `ExecutionNodeRef`
+- `FailureClassification`
+- `RecoveryAction`
+- `RecoveryRecord`
+- `RetryPolicy`
+- `CancellationAuthorization`
+- `CancellationIntent`
+- `CancellationKind`
+- `CancellationStatus`
 - `RunResult`
 - `RunResultStore`
 - `RunResultHistorian`

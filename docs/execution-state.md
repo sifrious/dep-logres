@@ -27,15 +27,20 @@ The package's complete legal transition graph is defined by `RunTransitionPolicy
 | `pending` | schedule first Attempt | `preparing` | no active Attempt | converges at command boundary | `invalid_transition` | no |
 | `pending` | cancel | `cancelled` | host supplies package cancellation command | converges | `invalid_transition` | yes |
 | `preparing` | start leased Attempt | `running` | current Attempt and active matching Lease | converges | `stale_attempt`, `foreign_lease`, `lease_expired` | no |
+| `preparing` | observe uncertain/retryable failure | `reconciling` | current Attempt, active matching Lease, classified failure | operation identity converges | `stale_attempt`, `foreign_lease`, `cancellation_pending` | no |
 | `preparing` | human gate | `needs_input` | package gate accepts input requirement | command-defined | `invalid_transition` | no |
 | `preparing` | fail / timeout / cancel | matching terminal state | current package command is valid | converges | `invalid_transition` | yes |
 | `running` | human gate | `needs_input` | package gate accepts input requirement | command-defined | `invalid_transition` | no |
+| `running` | observe uncertain/retryable failure | `reconciling` | classified failure and retry policy | operation identity converges | `stale_attempt`, `foreign_lease`, `cancellation_pending` | no |
 | `running` | finish | `succeeded`, `failed`, `timed_out`, or `cancelled` | current Attempt, active matching Lease, terminal result | identical result converges | `already_terminal`, `stale_attempt`, `foreign_lease`, `lease_expired` | yes |
 | `needs_input` | resume | `preparing` | required input is supplied | command-defined | `invalid_transition` | no |
 | `needs_input` | fail / timeout / cancel | matching terminal state | current package command is valid | converges | `invalid_transition` | yes |
+| `reconciling` | schedule linked retry | `preparing` | retry action, no active Attempt | converges through stored Attempt identity | `reconciliation_required`, `already_terminal` | no |
+| `reconciling` | provider acceptance confirmed | `running` | same Attempt and active matching Lease | converges | `foreign_lease`, `lease_expired` | no |
+| `reconciling` | exhausted/permanent failure, cancel, or timeout | matching terminal state | policy decision or accepted cancellation | converges | `already_terminal` | yes |
 | any terminal state | any transition | none | terminal state is immutable | only the identical accepted terminal operation converges | `already_terminal` | yes |
 
-The closed status vocabulary is `pending`, `preparing`, `running`, `needs_input`, `succeeded`, `failed`, `timed_out`, and `cancelled`. `RunTransitionPolicyTest` enumerates every allowed edge. All other edges reject. Current state has no public arbitrary-status setter.
+The closed status vocabulary is `pending`, `preparing`, `running`, `reconciling`, `needs_input`, `succeeded`, `failed`, `timed_out`, and `cancelled`. `RunTransitionPolicyTest` enumerates every allowed edge. All other edges reject. Current state has no public arbitrary-status setter.
 
 ## Attempt and lease lifecycle
 
@@ -48,6 +53,18 @@ An Attempt begins `ready`. Acquisition creates an `active` Lease and makes the A
 - Reclaim never changes a terminal Attempt or Run. A distinct retry has a new Attempt identity and explicit predecessor.
 
 The invariant is: **at most one active Lease authorizes execution of one Attempt**. Aggregate construction enforces it in memory. `ExecutionStateStore::compareAndSwap` lets a host enforce it atomically across processes; `ExecutionStateService::acquireLease` gives exactly one competing acquisition a winning state version.
+
+## Retry and recovery
+
+`FailureClassification` separates transient, permanent, and acknowledgement-uncertain observations. `RetryPolicy` deterministically returns `retry`, `reconcile`, or `fail` from the classification and Attempt count. The operation identity makes duplicate failure observation converge and rejects conflicting reuse.
+
+A transient retry closes the failed Attempt, moves the Run to `reconciling`, and permits exactly one new linked Attempt. A permanent or exhausted failure terminates the Run. Lost acknowledgement retains the same Attempt and Lease while provider lookup/reconciliation is pending; confirming remote acceptance resumes that Attempt and never dispatches a duplicate. `RecoveryRecord` is part of persisted current state, so restart/reload produces the same decision.
+
+## Cancellation and timeout
+
+Cancellation requires an explicit `CancellationAuthorization`. Before dispatch it immediately terminates without invocation. During active execution it durably records `requested` intent; while pending, acquisition and renewal reject with `cancellation_pending`. Confirmation requires the matching Attempt and Lease token, releases authority, retains a partial-result reference, and terminates as either `cancelled` or `timed_out` according to `CancellationKind`.
+
+Request and confirmation replay converge by operation identity. Reusing an identity for different intent rejects with `cancellation_conflict`. A lost provider acknowledgement leaves the requested intent visible and reconcilable rather than pretending cancellation completed. Terminal Runs cannot accept a new cancellation or retry.
 
 ## Adapter boundary
 

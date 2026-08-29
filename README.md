@@ -41,6 +41,10 @@ Logres creates a stable local `Run` and immutable provenance snapshot before dis
 
 Logres is the authority for mutable current execution state. `ExecutionState` separates a stable Run, each concrete `ExecutionAttempt`, and each bounded `ExecutionLease`; `ExecutionStateReadModel` exposes the current Attempt, lease holder and expiry, terminal result reference, failure reason, and complete Attempt lineage without requiring event replay. See [docs/execution-state.md](docs/execution-state.md) for the state machine, lease lifecycle, ownership boundary, and host persistence contract.
 
+Retry/recovery and cancellation are durable parts of the same aggregate. Failures are classified as transient, permanent, or acknowledgement-uncertain; retry policy produces an explicit retry, reconcile, or fail action. Authorized manual cancellation and timeout create idempotent intent, prevent new lease authority, preserve partial evidence, and remain distinct terminal outcomes.
+
+The composed package proof and its application-level boundary are documented in [docs/remote-execution-conformance.md](docs/remote-execution-conformance.md).
+
 ## Dispatch authorization
 
 Logres requires an explicit, current grant before a Run can enter dispatch. The policy matches canonical repository identity, workspace authority and normalized contained path, selected target, environment, runtime, frozen prompt permissions, actor, grant validity, and target-observation freshness. An allowed decision freezes the approved context on the Run. Capabilities describe what a target can do; only a grant describes what it may do.
