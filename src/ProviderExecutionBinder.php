@@ -11,6 +11,10 @@ final class ProviderExecutionBinder
         ProviderAcknowledgement $acknowledgement,
         ?RunId $existingOwner = null,
     ): ProviderBindingResult {
+        if ($run->providerBindingStatus === ProviderBindingStatus::ValidationBlocked) {
+            return $this->rejectWithoutTransition($run, 'validation_blocked', 'A validation-blocked Run cannot accept a provider acknowledgement.');
+        }
+
         $target = $run->provenance->targetSelection->target;
 
         if ($acknowledgement->providerExecutionId->provider !== $target->provider
@@ -49,6 +53,10 @@ final class ProviderExecutionBinder
         ProviderExecutionLookupResult $lookup,
         ?RunId $existingOwner = null,
     ): ProviderBindingResult {
+        if ($run->providerBindingStatus === ProviderBindingStatus::ValidationBlocked) {
+            return $this->rejectWithoutTransition($run, 'validation_blocked', 'A validation-blocked Run cannot be reconciled with a provider execution.');
+        }
+
         if ($run->providerBindingStatus === ProviderBindingStatus::NotDispatched) {
             return $this->conflict($run, 'reconciliation_before_dispatch', 'A provider execution cannot be reconciled before dispatch begins.');
         }
@@ -81,6 +89,15 @@ final class ProviderExecutionBinder
             ProviderBindingOutcome::Conflict,
             $run->conflictingAcknowledgement($message),
             $failure,
+        );
+    }
+
+    private function rejectWithoutTransition(Run $run, string $code, string $message): ProviderBindingResult
+    {
+        return new ProviderBindingResult(
+            ProviderBindingOutcome::Conflict,
+            $run,
+            new ProviderBindingFailure($code, $message),
         );
     }
 }

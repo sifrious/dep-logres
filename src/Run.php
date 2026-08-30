@@ -17,6 +17,7 @@ final readonly class Run
         public ?string $acknowledgedAt = null,
         public ?string $identityIssue = null,
         public ?DispatchAuthorizationSnapshot $dispatchAuthorization = null,
+        public ?PreDispatchValidationFailure $preDispatchValidationFailure = null,
     ) {
         $this->assertState();
     }
@@ -37,6 +38,20 @@ final readonly class Run
         }
 
         return new self($this->id, $this->provenance, ProviderBindingStatus::AwaitingAcknowledgement, dispatchedAt: $dispatchedAt, dispatchAuthorization: $this->dispatchAuthorization);
+    }
+
+    public function validationBlocked(string $code, string $message, string $failedAt): self
+    {
+        if ($this->providerBindingStatus !== ProviderBindingStatus::NotDispatched || $this->dispatchAuthorization !== null) {
+            throw new InvalidArgumentException('Only an unauthorized not-dispatched Run can be blocked by provider validation.');
+        }
+
+        return new self(
+            $this->id,
+            $this->provenance,
+            ProviderBindingStatus::ValidationBlocked,
+            preDispatchValidationFailure: new PreDispatchValidationFailure($code, $message, $failedAt),
+        );
     }
 
     public function authorized(DispatchAuthorizationDecision $decision): self
@@ -72,6 +87,10 @@ final readonly class Run
 
     public function acknowledged(ProviderExecutionId $providerExecutionId, string $acknowledgedAt): self
     {
+        if (! in_array($this->providerBindingStatus, [ProviderBindingStatus::AwaitingAcknowledgement, ProviderBindingStatus::AcknowledgementUncertain], true)) {
+            throw new InvalidArgumentException('Only a dispatched Run can be acknowledged.');
+        }
+
         return new self($this->id, $this->provenance, ProviderBindingStatus::Acknowledged, $providerExecutionId, $this->dispatchedAt, $acknowledgedAt, dispatchAuthorization: $this->dispatchAuthorization);
     }
 
@@ -94,6 +113,7 @@ final readonly class Run
         $timestamp = static fn (?string $value): bool => $value !== null && preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/', $value) === 1;
         $valid = match ($this->providerBindingStatus) {
             ProviderBindingStatus::NotDispatched => $this->providerExecutionId === null && $this->dispatchedAt === null && $this->acknowledgedAt === null && $this->identityIssue === null,
+            ProviderBindingStatus::ValidationBlocked => $this->dispatchAuthorization === null && $this->providerExecutionId === null && $this->dispatchedAt === null && $this->acknowledgedAt === null && $this->identityIssue === null && $this->preDispatchValidationFailure !== null,
             ProviderBindingStatus::AwaitingAcknowledgement => $this->dispatchAuthorization !== null && $this->providerExecutionId === null && $timestamp($this->dispatchedAt) && $this->acknowledgedAt === null && $this->identityIssue === null,
             ProviderBindingStatus::Acknowledged => $this->dispatchAuthorization !== null && $this->providerExecutionId !== null && $timestamp($this->dispatchedAt) && $timestamp($this->acknowledgedAt) && $this->identityIssue === null,
             ProviderBindingStatus::AcknowledgementUncertain, ProviderBindingStatus::ReconciliationRequired => $this->dispatchAuthorization !== null && $this->providerExecutionId === null && $timestamp($this->dispatchedAt) && $this->acknowledgedAt === null && trim((string) $this->identityIssue) !== '',
@@ -102,6 +122,10 @@ final readonly class Run
 
         if (! $valid) {
             throw new InvalidArgumentException('Run provider-binding state is inconsistent.');
+        }
+
+        if ($this->providerBindingStatus !== ProviderBindingStatus::ValidationBlocked && $this->preDispatchValidationFailure !== null) {
+            throw new InvalidArgumentException('Only a validation-blocked Run can contain pre-dispatch validation failure evidence.');
         }
     }
 

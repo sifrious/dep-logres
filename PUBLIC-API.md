@@ -81,6 +81,7 @@ The package is pre-release. These names define the current consumer surface; sem
 - `RunId`
 - `RunProvenance`
 - `Run`
+- `PreDispatchValidationFailure`
 - `RunStore`
 - `RunIdentityConflict`
 - `RunIdentityReadModel`

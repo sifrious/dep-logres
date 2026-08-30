@@ -32,6 +32,7 @@ final readonly class RunIdentityReadModel
         public ?string $acknowledgedAt,
         public ?string $identityIssue,
         public ?array $dispatchAuthorization,
+        public ?array $preDispatchValidationFailure,
     ) {}
 
     public static function fromRun(Run $run): self
@@ -74,6 +75,11 @@ final readonly class RunIdentityReadModel
                 'permissions' => $run->dispatchAuthorization->permissions,
                 'policy_version' => $run->dispatchAuthorization->policyVersion,
                 'authorized_at' => $run->dispatchAuthorization->authorizedAt,
+            ],
+            preDispatchValidationFailure: $run->preDispatchValidationFailure === null ? null : [
+                'code' => $run->preDispatchValidationFailure->code,
+                'message' => $run->preDispatchValidationFailure->message,
+                'failed_at' => $run->preDispatchValidationFailure->failedAt,
             ],
         );
     }
