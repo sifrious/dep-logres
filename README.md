@@ -52,3 +52,8 @@ Logres requires an explicit, current grant before a Run can enter dispatch. The 
 ## Runner boundary
 
 Logres defines provider-neutral runner identity, platform, availability, workload, and capability snapshot contracts. Hosts discover and persist runner observations; Wardrobe remains authoritative for runtime adapter profiles. See [docs/runner-boundary.md](docs/runner-boundary.md).
+
+## License
+
+Copyright © 2026 Sifrious. All rights reserved. This is publicly viewable
+proprietary software, not open-source software. See [LICENSE.md](LICENSE.md).
