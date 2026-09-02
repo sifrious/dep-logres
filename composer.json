@@ -15,11 +15,8 @@
     },
     "repositories": [
         {
-            "type": "path",
-            "url": "../dep-authorization-contract",
-            "options": {
-                "symlink": false
-            }
+            "type": "vcs",
+            "url": "https://github.com/sifrious/dep-authorization-contract.git"
         },
         {
             "type": "vcs",
