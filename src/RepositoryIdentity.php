@@ -10,7 +10,7 @@ final readonly class RepositoryIdentity
 {
     public function __construct(public string $value)
     {
-        if (preg_match('/^repository:[a-zA-Z0-9._-]+(?:\/[a-zA-Z0-9._-]+)*$/', $value) !== 1) {
+        if (preg_match('/^(?:repository:[a-zA-Z0-9._-]+(?:\/[a-zA-Z0-9._-]+)*|repo_[a-zA-Z0-9]+)$/', $value) !== 1) {
             throw new InvalidArgumentException('A repository identity must be canonical and independent of a local path.');
         }
     }

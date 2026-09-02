@@ -31,6 +31,7 @@ final readonly class ExecutionEnvelope
         public string $authenticationMaterial,
         array $requiredCapabilities,
         array $requestPayload,
+        public ?StacksExecutionContext $stacksContext = null,
     ) {
         if ($expiresAt <= $issuedAt || trim($runtime) === '' || trim($runtimeAdapter) === '' || trim($authorizationGrantReference) === '' || trim($protocolVersion) === '' || trim($idempotencyIdentity) === '' || trim($authenticationMaterial) === '') {
             throw new InvalidArgumentException('An execution envelope requires bounded validity and complete immutable execution authority.');
@@ -42,6 +43,13 @@ final readonly class ExecutionEnvelope
         }
         $this->requiredCapabilities = array_values(array_unique($requiredCapabilities));
         $this->requestPayload = $requestPayload;
+        if ($stacksContext !== null && (
+            $workspaceIdentity->value !== $stacksContext->workspace->workspaceId
+            || $workspacePath->value !== $stacksContext->provenance->executionPath
+            || $repositoryIdentity->value !== $stacksContext->workspace->repositoryId
+        )) {
+            throw new InvalidArgumentException('Legacy execution fields must match the canonical Stacks context during migration.');
+        }
     }
 
     /** @param array<string, mixed> $input */
