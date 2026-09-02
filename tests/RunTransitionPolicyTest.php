@@ -26,14 +26,17 @@ final class RunTransitionPolicyTest extends TestCase
     {
         return [
             [RunStatus::Pending, RunStatus::Preparing],
+            [RunStatus::Pending, RunStatus::TimedOut],
             [RunStatus::Pending, RunStatus::Cancelled],
             [RunStatus::Preparing, RunStatus::Running],
+            [RunStatus::Preparing, RunStatus::Reconciling],
             [RunStatus::Preparing, RunStatus::NeedsInput],
             [RunStatus::Preparing, RunStatus::Failed],
             [RunStatus::Preparing, RunStatus::ProviderError],
             [RunStatus::Preparing, RunStatus::TimedOut],
             [RunStatus::Preparing, RunStatus::Cancelled],
             [RunStatus::Running, RunStatus::NeedsInput],
+            [RunStatus::Running, RunStatus::Reconciling],
             [RunStatus::Running, RunStatus::Succeeded],
             [RunStatus::Running, RunStatus::Failed],
             [RunStatus::Running, RunStatus::ProviderError],
@@ -43,6 +46,11 @@ final class RunTransitionPolicyTest extends TestCase
             [RunStatus::NeedsInput, RunStatus::Failed],
             [RunStatus::NeedsInput, RunStatus::TimedOut],
             [RunStatus::NeedsInput, RunStatus::Cancelled],
+            [RunStatus::Reconciling, RunStatus::Preparing],
+            [RunStatus::Reconciling, RunStatus::Running],
+            [RunStatus::Reconciling, RunStatus::Failed],
+            [RunStatus::Reconciling, RunStatus::TimedOut],
+            [RunStatus::Reconciling, RunStatus::Cancelled],
         ];
     }
 

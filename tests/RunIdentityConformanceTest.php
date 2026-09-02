@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Sifrious\Logres\Tests;
 
+use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Sifrious\Logres\ExecutionTargetId;
@@ -23,6 +24,69 @@ use Sifrious\Logres\Tests\Fixtures\RunIdentityFixtures;
 
 final class RunIdentityConformanceTest extends TestCase
 {
+    #[Test]
+    public function provider_validation_failure_is_a_durable_blocked_state(): void
+    {
+        $original = RunIdentityFixtures::unauthorizedRun();
+        $blocked = $original->validationBlocked(
+            'PROVIDER_TARGET_UNKNOWN_OR_REVOKED',
+            'The provider no longer recognizes the frozen target.',
+            RunIdentityFixtures::DISPATCHED_AT,
+        );
+
+        self::assertSame(ProviderBindingStatus::ValidationBlocked, $blocked->providerBindingStatus);
+        self::assertSame($original->provenance, $blocked->provenance);
+        self::assertSame('PROVIDER_TARGET_UNKNOWN_OR_REVOKED', $blocked->preDispatchValidationFailure?->code);
+        self::assertNull($blocked->providerExecutionId);
+        self::assertNull($blocked->dispatchedAt);
+        self::assertNull($blocked->acknowledgedAt);
+        self::assertNull($blocked->dispatchAuthorization);
+    }
+
+    #[Test]
+    public function blocked_run_cannot_dispatch_or_be_authorized(): void
+    {
+        $blocked = RunIdentityFixtures::unauthorizedRun()->validationBlocked(
+            'TARGET_CHANGED',
+            'Provider validation returned changed target facts.',
+            RunIdentityFixtures::DISPATCHED_AT,
+        );
+
+        $this->expectException(InvalidArgumentException::class);
+        $blocked->awaitingAcknowledgement(RunIdentityFixtures::DISPATCHED_AT);
+    }
+
+    #[Test]
+    public function blocked_run_rejects_provider_binding_without_losing_failure_evidence(): void
+    {
+        $blocked = RunIdentityFixtures::unauthorizedRun()->validationBlocked(
+            'TARGET_CHANGED',
+            'Provider validation returned changed target facts.',
+            RunIdentityFixtures::DISPATCHED_AT,
+        );
+        $binder = new ProviderExecutionBinder;
+
+        $acknowledgement = $binder->acknowledge($blocked, RunIdentityFixtures::acknowledgement());
+        $reconciliation = $binder->reconcile(
+            $blocked,
+            new ProviderExecutionLookupResult(ProviderLookupStatus::Found, RunIdentityFixtures::acknowledgement()),
+        );
+
+        self::assertSame(ProviderBindingOutcome::Conflict, $acknowledgement->outcome);
+        self::assertSame('validation_blocked', $acknowledgement->failure?->code);
+        self::assertSame($blocked, $acknowledgement->run);
+        self::assertSame(ProviderBindingOutcome::Conflict, $reconciliation->outcome);
+        self::assertSame('validation_blocked', $reconciliation->failure?->code);
+        self::assertSame($blocked, $reconciliation->run);
+    }
+
+    #[Test]
+    public function validation_failure_requires_a_complete_structured_shape(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        RunIdentityFixtures::unauthorizedRun()->validationBlocked('', '', 'not-a-timestamp');
+    }
+
     #[Test]
     public function local_run_exists_with_immutable_provenance_before_dispatch(): void
     {

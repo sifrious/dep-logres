@@ -21,9 +21,10 @@ final class RunTransitionPolicy
     public static function allowedFrom(RunStatus $status): array
     {
         return match ($status) {
-            RunStatus::Pending => [RunStatus::Preparing, RunStatus::Cancelled],
-            RunStatus::Preparing => [RunStatus::Running, RunStatus::NeedsInput, RunStatus::Failed, RunStatus::ProviderError, RunStatus::TimedOut, RunStatus::Cancelled],
-            RunStatus::Running => [RunStatus::NeedsInput, RunStatus::Succeeded, RunStatus::Failed, RunStatus::ProviderError, RunStatus::TimedOut, RunStatus::Cancelled],
+            RunStatus::Pending => [RunStatus::Preparing, RunStatus::TimedOut, RunStatus::Cancelled],
+            RunStatus::Preparing => [RunStatus::Running, RunStatus::Reconciling, RunStatus::NeedsInput, RunStatus::Failed, RunStatus::ProviderError, RunStatus::TimedOut, RunStatus::Cancelled],
+            RunStatus::Running => [RunStatus::Reconciling, RunStatus::NeedsInput, RunStatus::Succeeded, RunStatus::Failed, RunStatus::ProviderError, RunStatus::TimedOut, RunStatus::Cancelled],
+            RunStatus::Reconciling => [RunStatus::Preparing, RunStatus::Running, RunStatus::Failed, RunStatus::TimedOut, RunStatus::Cancelled],
             RunStatus::NeedsInput => [RunStatus::Preparing, RunStatus::Failed, RunStatus::TimedOut, RunStatus::Cancelled],
             RunStatus::Succeeded, RunStatus::Failed, RunStatus::ProviderError, RunStatus::TimedOut, RunStatus::Cancelled => [],
         };

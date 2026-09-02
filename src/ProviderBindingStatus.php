@@ -7,6 +7,7 @@ namespace Sifrious\Logres;
 enum ProviderBindingStatus: string
 {
     case NotDispatched = 'not_dispatched';
+    case ValidationBlocked = 'validation_blocked';
     case AwaitingAcknowledgement = 'awaiting_acknowledgement';
     case Acknowledged = 'acknowledged';
     case AcknowledgementUncertain = 'acknowledgement_uncertain';

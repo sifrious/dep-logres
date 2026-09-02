@@ -8,4 +8,5 @@ enum TargetSelectionStatus: string
 {
     case Selected = 'selected';
     case Rejected = 'rejected';
+    case NeedsTarget = 'needs_target';
 }

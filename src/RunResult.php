@@ -22,6 +22,8 @@ final readonly class RunResult
         public ?string $agentClaim = null,
         public ?string $observedOutcome = null,
         public ?RequiredVerificationOutcome $requiredVerification = null,
+        public VerificationStatus $verificationStatus = VerificationStatus::Incomplete,
+        public FinalizationStatus $finalizationStatus = FinalizationStatus::Incomplete,
     ) {
         if (! $this->status->isTerminal()) {
             throw new InvalidArgumentException('A run result requires a terminal status.');
@@ -91,6 +93,33 @@ final readonly class RunResult
             agentClaim: $this->agentClaim,
             observedOutcome: $this->observedOutcome,
             requiredVerification: $outcome,
+            verificationStatus: $this->verificationStatus,
+            finalizationStatus: $this->finalizationStatus,
+        );
+    }
+
+    public function isVerifiedSuccess(): bool
+    {
+        return $this->status === RunStatus::Succeeded
+            && $this->verificationStatus === VerificationStatus::Succeeded
+            && $this->finalizationStatus === FinalizationStatus::Complete;
+    }
+
+    public function finalizationIncomplete(string $reason): self
+    {
+        return new self(
+            status: $this->status,
+            stdout: $this->stdout,
+            stderr: $this->stderr,
+            exitCode: $this->exitCode,
+            signal: $this->signal,
+            reason: $this->reason,
+            evidence: [...$this->evidence, new RunEvidence('finalization.failure', $reason, gmdate('c'))],
+            agentClaim: $this->agentClaim,
+            observedOutcome: $this->observedOutcome,
+            requiredVerification: $this->requiredVerification,
+            verificationStatus: VerificationStatus::Incomplete,
+            finalizationStatus: FinalizationStatus::Incomplete,
         );
     }
 }

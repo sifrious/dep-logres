@@ -56,6 +56,7 @@ The package is pre-release. These names define the current consumer surface; sem
 - `ExecutionTargetId`
 - `ExecutionTargetRequirements`
 - `ExecutionTargetCandidate`
+- `ExecutionTargetEvaluation`
 - `ExecutionTargetAuthorization`
 - `ExecutionTargetSelection`
 - `ExecutionTargetSelector`
@@ -80,6 +81,7 @@ The package is pre-release. These names define the current consumer surface; sem
 - `RunId`
 - `RunProvenance`
 - `Run`
+- `PreDispatchValidationFailure`
 - `RunStore`
 - `RunIdentityConflict`
 - `RunIdentityReadModel`
@@ -107,13 +109,75 @@ The package is pre-release. These names define the current consumer surface; sem
 - `RunStatus`
 - `RunTransitionPolicy`
 - `InvalidRunTransition`
+- `ExecutionState`
+- `ExecutionStateStore`
+- `ExecutionStateService`
+- `ExecutionStateReadModel`
+- `ExecutionStateDetails`
+- `ExecutionStateRejected`
+- `ExecutionStateRejectionReason`
+- `ExecutionAttempt`
+- `AttemptId`
+- `AttemptStatus`
+- `ExecutionLease`
+- `LeaseId`
+- `LeaseToken`
+- `LeaseStatus`
+- `ExecutionNodeRef`
+- `FailureClassification`
+- `RecoveryAction`
+- `RecoveryRecord`
+- `RetryPolicy`
+- `CancellationAuthorization`
+- `CancellationIntent`
+- `CancellationKind`
+- `CancellationStatus`
 - `RunResult`
+- `RunResultStore`
+- `RunResultHistorian`
 - `RunResultReadModel`
+- `VerificationStatus`
+- `FinalizationStatus`
 - `RunEvidence`
 - `PreflightSnapshot`
 - `PostflightReport`
 - `PostflightResultAssembler`
 - `TurnRunner`
+
+## Runner boundary
+
+- `RunnerIdentity`
+- `PlatformIdentity`
+- `CapabilitySnapshot`
+- `RunnerAvailability`
+- `CurrentWorkload`
+- `RunnerDescriptor`
+- `RunnerCompatibilityRequirements`
+- `RunnerCompatibilityFailure`
+- `RunnerCompatibility`
+- `ExecutionEnvelope`
+- `EnvelopeAuthenticator`
+- `RunnerAuthorization`
+- `RunnerWorkspace`
+- `RunnerLifecycle`
+- `ExecutionStateRunnerLifecycle`
+- `RunnerRejectionReason`
+- `RunnerAcceptance`
+- `RuntimeRequest`
+- `RuntimeResult`
+- `RunnerRuntime`
+- `RunnerRuntimeObserver`
+- `RunnerEventType`
+- `RunnerEvent`
+- `RunnerEventSink`
+- `RunnerTerminalStatus`
+- `RunnerTerminalResult`
+- `RunnerLocalStage`
+- `RunnerLocalRecord`
+- `RunnerLocalStateStore`
+- `RunnerExecutionOutcome`
+- `SequencedRunnerObserver`
+- `ExecutionRunner`
 
 ## Harness substitution
 

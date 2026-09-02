@@ -16,6 +16,8 @@ final readonly class PostflightResultAssembler
             agentClaim: $providerResult->agentClaim,
             observedOutcome: $report->observedOutcome,
             requiredVerification: $providerResult->requiredVerification,
+            verificationStatus: $report->verificationStatus,
+            finalizationStatus: FinalizationStatus::Complete,
         );
     }
 }

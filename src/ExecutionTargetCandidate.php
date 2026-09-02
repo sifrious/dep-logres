@@ -25,8 +25,16 @@ final readonly class ExecutionTargetCandidate
         array $capabilities,
         public ?TaskId $currentTaskId,
         public string $observedAt,
+        public string $executionClass = 'provider-hosted',
+        public ?string $executionNodeId = null,
+        public ?string $providerTargetId = null,
+        public ?string $capabilitySnapshotId = null,
+        public ?string $workspaceGrantId = null,
+        public ?string $workspaceIdentity = null,
+        public int $availableSlots = 1,
+        public ?CapabilitySnapshot $capabilitySnapshot = null,
     ) {
-        if (trim($provider) === '' || ! str_starts_with($id->value, "target:{$provider}:") || trim($runtime) === '' || trim($environment) === '' || trim($workspaceAuthority) === '' || trim($repositoryIdentity) === '' || ! self::nonemptyStrings($agentAdapters) || ! self::nonemptyStrings($capabilities) || ! self::timestamp($observedAt)) {
+        if (trim($provider) === '' || ! str_starts_with($id->value, "target:{$provider}:") || trim($runtime) === '' || trim($environment) === '' || trim($workspaceAuthority) === '' || trim($repositoryIdentity) === '' || ! self::nonemptyStrings($agentAdapters) || ! self::nonemptyStrings($capabilities) || ! self::timestamp($observedAt) || ! in_array($executionClass, ['local', 'managed-cloud', 'customer-owned', 'provider-hosted'], true) || $availableSlots < 0) {
             throw new InvalidArgumentException('A target candidate requires provider facts, runtime, authority, repository, adapters, capabilities, and observation time.');
         }
 
