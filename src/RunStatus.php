@@ -13,13 +13,14 @@ enum RunStatus: string
     case NeedsInput = 'needs_input';
     case Succeeded = 'succeeded';
     case Failed = 'failed';
+    case ProviderError = 'provider_error';
     case TimedOut = 'timed_out';
     case Cancelled = 'cancelled';
 
     public function isTerminal(): bool
     {
         return match ($this) {
-            self::Succeeded, self::Failed, self::TimedOut, self::Cancelled => true,
+            self::Succeeded, self::Failed, self::ProviderError, self::TimedOut, self::Cancelled => true,
             default => false,
         };
     }

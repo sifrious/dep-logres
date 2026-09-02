@@ -32,12 +32,14 @@ final class RunTransitionPolicyTest extends TestCase
             [RunStatus::Preparing, RunStatus::Reconciling],
             [RunStatus::Preparing, RunStatus::NeedsInput],
             [RunStatus::Preparing, RunStatus::Failed],
+            [RunStatus::Preparing, RunStatus::ProviderError],
             [RunStatus::Preparing, RunStatus::TimedOut],
             [RunStatus::Preparing, RunStatus::Cancelled],
             [RunStatus::Running, RunStatus::NeedsInput],
             [RunStatus::Running, RunStatus::Reconciling],
             [RunStatus::Running, RunStatus::Succeeded],
             [RunStatus::Running, RunStatus::Failed],
+            [RunStatus::Running, RunStatus::ProviderError],
             [RunStatus::Running, RunStatus::TimedOut],
             [RunStatus::Running, RunStatus::Cancelled],
             [RunStatus::NeedsInput, RunStatus::Preparing],
@@ -66,6 +68,7 @@ final class RunTransitionPolicyTest extends TestCase
         return [
             [RunStatus::Succeeded],
             [RunStatus::Failed],
+            [RunStatus::ProviderError],
             [RunStatus::TimedOut],
             [RunStatus::Cancelled],
         ];

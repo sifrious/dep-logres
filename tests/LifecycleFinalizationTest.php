@@ -33,6 +33,7 @@ use Sifrious\Logres\Turn;
 use Sifrious\Logres\TurnContext;
 use Sifrious\Logres\TurnRunner;
 use Sifrious\Logres\VerificationStatus;
+use Sifrious\Logres\Tests\Fixtures\InvariantPipelines;
 
 final class LifecycleFinalizationTest extends TestCase
 {
@@ -40,7 +41,7 @@ final class LifecycleFinalizationTest extends TestCase
     public function preflight_rejection_never_invokes_provider(): void
     {
         $harness = new LifecycleHarness;
-        $runner = new TurnRunner(new BeforeTurnPipeline([new RejectingPreflight]), new AfterTurnPipeline);
+        $runner = self::runner(new BeforeTurnPipeline([new RejectingPreflight]), new AfterTurnPipeline);
 
         try {
         $runner->run(self::request(), self::context(), $harness, new LifecycleNullObserver);
@@ -132,12 +133,12 @@ final class LifecycleFinalizationTest extends TestCase
     public function provider_crash_preserves_commit_evidence(): void
     {
         $harness = new LifecycleHarness(throwOnStart: true);
-        $result = (new TurnRunner(
+        $result = (self::runner(
             new BeforeTurnPipeline,
             new AfterTurnPipeline([new RecordingPostflight]),
         ))->run(self::request(), self::context(), $harness, new LifecycleNullObserver);
 
-        self::assertSame(RunStatus::Failed, $result->status);
+        self::assertSame(RunStatus::ProviderError, $result->status);
         self::assertSame('sha:partial', $result->evidence[0]->reference);
     }
 
@@ -186,12 +187,12 @@ final class LifecycleFinalizationTest extends TestCase
     {
         $harness = new LifecycleHarness(throwOnStart: true);
         $after = new RecordingPostflight;
-        $runner = new TurnRunner(new BeforeTurnPipeline, new AfterTurnPipeline([$after]));
+        $runner = self::runner(new BeforeTurnPipeline, new AfterTurnPipeline([$after]));
 
         $result = $runner->run(self::request(), self::context(), $harness, new LifecycleNullObserver);
 
         self::assertSame(1, $after->calls);
-        self::assertSame(RunStatus::Failed, $result->status);
+        self::assertSame(RunStatus::ProviderError, $result->status);
         self::assertSame('sha:partial', $result->evidence[0]->reference);
         self::assertSame(FinalizationStatus::Complete, $result->finalizationStatus);
     }
@@ -199,7 +200,7 @@ final class LifecycleFinalizationTest extends TestCase
     #[Test]
     public function postflight_unavailable_is_incomplete_not_success(): void
     {
-        $runner = new TurnRunner(new BeforeTurnPipeline, new AfterTurnPipeline([new FailingPostflight]));
+        $runner = self::runner(new BeforeTurnPipeline, new AfterTurnPipeline([new FailingPostflight]));
         $result = $runner->run(self::request(), self::context(), new LifecycleHarness, new LifecycleNullObserver);
 
         self::assertSame(FinalizationStatus::Incomplete, $result->finalizationStatus);
@@ -212,7 +213,7 @@ final class LifecycleFinalizationTest extends TestCase
     {
         $store = new MemoryResultStore;
         $harness = new LifecycleHarness;
-        $runner = new TurnRunner(
+        $runner = self::runner(
             new BeforeTurnPipeline,
             new AfterTurnPipeline([new RecordingPostflight(VerificationStatus::Succeeded)]),
             $store,
@@ -232,6 +233,22 @@ final class LifecycleFinalizationTest extends TestCase
     private static function request(?string $key = null): RunRequest
     {
         return new RunRequest(new Turn('execute'), 'fixture', 'workspace', $key);
+    }
+
+    private static function runner(
+        BeforeTurnPipeline $before,
+        AfterTurnPipeline $after,
+        ?RunResultStore $results = null,
+        ?RunResultHistorian $historian = null,
+    ): TurnRunner {
+        return new TurnRunner(
+            InvariantPipelines::preflight(),
+            $before,
+            InvariantPipelines::finalization(),
+            $after,
+            $results,
+            $historian,
+        );
     }
 
     private static function context(): TurnContext

@@ -10,7 +10,9 @@ use Throwable;
 final readonly class TurnRunner
 {
     public function __construct(
+        private InvariantPreflight $invariantPreflight,
         private BeforeTurnPipeline $before,
+        private InvariantFinalization $invariantFinalization,
         private AfterTurnPipeline $after,
         private ?RunResultStore $results = null,
         private ?RunResultHistorian $historian = null,
@@ -32,6 +34,7 @@ final readonly class TurnRunner
         }
 
         // This is the hard gate. A failure escapes before any harness method is called.
+        $context = $this->invariantPreflight->process($request, $context);
         $context = $this->before->process($request, $context);
         $observer->contextResolved($context);
 
@@ -45,11 +48,19 @@ final readonly class TurnRunner
 
             $providerResult = $status->terminalResult();
         } catch (Throwable $failure) {
-            $providerResult = RunResult::failed($failure->getMessage());
+            $providerResult = RunResult::providerError($failure->getMessage(), $failure::class);
         }
 
         try {
-            $result = $this->after->process($request, $context, $providerResult);
+            $finalized = $this->invariantFinalization->process($request, $context, $providerResult);
+            $result = $this->after->process($request, $context, $finalized);
+
+            if ($result->status !== $finalized->status
+                || $result->requiredVerification !== $finalized->requiredVerification) {
+                throw new \LogicException('Optional after-turn handlers cannot replace canonical result disposition.');
+            }
+
+            $this->invariantFinalization->assertCanonical($result);
         } catch (Throwable $failure) {
             $result = $providerResult->finalizationIncomplete($failure::class.': '.$failure->getMessage());
         }

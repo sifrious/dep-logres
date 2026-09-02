@@ -14,7 +14,7 @@ final class RunStatusTest extends TestCase
     public function it_has_a_closed_status_vocabulary(): void
     {
         self::assertSame(
-            ['pending', 'preparing', 'running', 'reconciling', 'needs_input', 'succeeded', 'failed', 'timed_out', 'cancelled'],
+            ['pending', 'preparing', 'running', 'reconciling', 'needs_input', 'succeeded', 'failed', 'provider_error', 'timed_out', 'cancelled'],
             array_column(RunStatus::cases(), 'value'),
         );
     }
@@ -27,6 +27,7 @@ final class RunStatusTest extends TestCase
         self::assertFalse(RunStatus::Reconciling->isTerminal());
         self::assertTrue(RunStatus::Succeeded->isTerminal());
         self::assertTrue(RunStatus::Failed->isTerminal());
+        self::assertTrue(RunStatus::ProviderError->isTerminal());
         self::assertTrue(RunStatus::TimedOut->isTerminal());
         self::assertTrue(RunStatus::Cancelled->isTerminal());
     }

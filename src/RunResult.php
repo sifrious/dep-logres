@@ -21,6 +21,7 @@ final readonly class RunResult
         array $evidence = [],
         public ?string $agentClaim = null,
         public ?string $observedOutcome = null,
+        public ?RequiredVerificationOutcome $requiredVerification = null,
         public VerificationStatus $verificationStatus = VerificationStatus::Incomplete,
         public FinalizationStatus $finalizationStatus = FinalizationStatus::Incomplete,
     ) {
@@ -34,6 +35,12 @@ final readonly class RunResult
 
         if ($this->status !== RunStatus::Succeeded && $this->exitCode === 0) {
             throw new InvalidArgumentException('A non-successful run cannot carry exit code zero.');
+        }
+
+        if ($this->status === RunStatus::Succeeded
+            && $this->requiredVerification !== null
+            && $this->requiredVerification !== RequiredVerificationOutcome::Passed) {
+            throw new InvalidArgumentException('A successful run requires passing required verification.');
         }
 
         foreach ($evidence as $item) {
@@ -64,6 +71,39 @@ final readonly class RunResult
         return new self(RunStatus::Cancelled, $stdout, $stderr, null, null, $reason);
     }
 
+    public static function providerError(string $stderr, ?string $reason = null): self
+    {
+        return new self(RunStatus::ProviderError, stderr: $stderr, reason: $reason);
+    }
+
+    public function withRequiredVerification(RequiredVerificationOutcome $outcome): self
+    {
+        $status = $this->status;
+        $reason = $this->reason;
+        $exitCode = $this->exitCode;
+
+        if ($status === RunStatus::Succeeded && $outcome !== RequiredVerificationOutcome::Passed) {
+            $status = RunStatus::Failed;
+            $exitCode = null;
+            $reason ??= 'Required verification did not pass.';
+        }
+
+        return new self(
+            status: $status,
+            stdout: $this->stdout,
+            stderr: $this->stderr,
+            exitCode: $exitCode,
+            signal: $this->signal,
+            reason: $reason,
+            evidence: $this->evidence,
+            agentClaim: $this->agentClaim,
+            observedOutcome: $this->observedOutcome,
+            requiredVerification: $outcome,
+            verificationStatus: $this->verificationStatus,
+            finalizationStatus: $this->finalizationStatus,
+        );
+    }
+
     public function isVerifiedSuccess(): bool
     {
         return $this->status === RunStatus::Succeeded
@@ -74,17 +114,18 @@ final readonly class RunResult
     public function finalizationIncomplete(string $reason): self
     {
         return new self(
-            $this->status,
-            $this->stdout,
-            $this->stderr,
-            $this->exitCode,
-            $this->signal,
-            $this->reason,
-            [...$this->evidence, new RunEvidence('finalization.failure', $reason, gmdate('c'))],
-            $this->agentClaim,
-            $this->observedOutcome,
-            VerificationStatus::Incomplete,
-            FinalizationStatus::Incomplete,
+            status: $this->status,
+            stdout: $this->stdout,
+            stderr: $this->stderr,
+            exitCode: $this->exitCode,
+            signal: $this->signal,
+            reason: $this->reason,
+            evidence: [...$this->evidence, new RunEvidence('finalization.failure', $reason, gmdate('c'))],
+            agentClaim: $this->agentClaim,
+            observedOutcome: $this->observedOutcome,
+            requiredVerification: $this->requiredVerification,
+            verificationStatus: VerificationStatus::Incomplete,
+            finalizationStatus: FinalizationStatus::Incomplete,
         );
     }
 }

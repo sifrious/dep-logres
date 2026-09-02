@@ -15,6 +15,7 @@ final readonly class PostflightResultAssembler
             evidence: [...$providerResult->evidence, ...$report->evidence],
             agentClaim: $providerResult->agentClaim,
             observedOutcome: $report->observedOutcome,
+            requiredVerification: $providerResult->requiredVerification,
             verificationStatus: $report->verificationStatus,
             finalizationStatus: FinalizationStatus::Complete,
         );

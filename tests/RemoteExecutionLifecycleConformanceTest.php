@@ -39,6 +39,7 @@ use Sifrious\Logres\RunRequest;
 use Sifrious\Logres\RunStatus;
 use Sifrious\Logres\Tests\Fixtures\InMemoryExecutionStateStore;
 use Sifrious\Logres\Tests\Fixtures\RunIdentityFixtures;
+use Sifrious\Logres\Tests\Fixtures\InvariantPipelines;
 use Sifrious\Logres\Turn;
 use Sifrious\Logres\TurnContext;
 use Sifrious\Logres\TurnRunner;
@@ -59,7 +60,9 @@ final class RemoteExecutionLifecycleConformanceTest extends TestCase
             ->start($attemptId, $token, $this->at(2));
         $harness = new ConformanceHarness;
         $result = (new TurnRunner(
+            InvariantPipelines::preflight(),
             new BeforeTurnPipeline([new AuthorizedRunPreflight($authorizedRun)]),
+            InvariantPipelines::finalization(),
             new AfterTurnPipeline([new VerifiedConformancePostflight]),
         ))->run(
             new RunRequest(new Turn('execute authorized work'), 'conformance', 'workspace:personal', 'request:authorized'),
