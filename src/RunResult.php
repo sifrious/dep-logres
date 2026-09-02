@@ -37,6 +37,12 @@ final readonly class RunResult
             throw new InvalidArgumentException('A non-successful run cannot carry exit code zero.');
         }
 
+        if ($this->status === RunStatus::Succeeded
+            && $this->requiredVerification !== null
+            && $this->requiredVerification !== RequiredVerificationOutcome::Passed) {
+            throw new InvalidArgumentException('A successful run requires passing required verification.');
+        }
+
         foreach ($evidence as $item) {
             if (! $item instanceof RunEvidence) {
                 throw new InvalidArgumentException('Run result evidence must contain RunEvidence values.');

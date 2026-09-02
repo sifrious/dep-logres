@@ -52,8 +52,14 @@ final readonly class TurnRunner
         }
 
         try {
-            $result = $this->invariantFinalization->process($request, $context, $providerResult);
-            $result = $this->after->process($request, $context, $result);
+            $finalized = $this->invariantFinalization->process($request, $context, $providerResult);
+            $result = $this->after->process($request, $context, $finalized);
+
+            if ($result->status !== $finalized->status
+                || $result->requiredVerification !== $finalized->requiredVerification) {
+                throw new \LogicException('Optional after-turn handlers cannot replace canonical result disposition.');
+            }
+
             $this->invariantFinalization->assertCanonical($result);
         } catch (Throwable $failure) {
             $result = $providerResult->finalizationIncomplete($failure::class.': '.$failure->getMessage());

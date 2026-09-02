@@ -15,6 +15,7 @@ use Sifrious\Logres\BeforeTurnHandler;
 use Sifrious\Logres\BeforeTurnPipeline;
 use Sifrious\Logres\EnvironmentSnapshot;
 use Sifrious\Logres\ExecutionObserver;
+use Sifrious\Logres\FinalizationStatus;
 use Sifrious\Logres\HarnessCapability;
 use Sifrious\Logres\HarnessHandle;
 use Sifrious\Logres\HarnessProbe;
@@ -109,6 +110,40 @@ final class TurnRunnerTest extends TestCase
             'finalize:ScheduleHistorianExport',
             'after',
         ], $sequence->events);
+    }
+
+    #[Test]
+    public function optional_after_handlers_cannot_replace_the_canonical_disposition(): void
+    {
+        $sequence = new Sequence;
+        $runner = new TurnRunner(
+            new InvariantPreflight([
+                new SequencedInvariantHandler(InvariantPreflightPhase::Authorization, $sequence),
+                new SequencedInvariantHandler(InvariantPreflightPhase::Workspace, $sequence),
+                new SequencedInvariantHandler(InvariantPreflightPhase::Provenance, $sequence),
+            ]),
+            new BeforeTurnPipeline,
+            new InvariantFinalization(FinalizationFixtures::passing($sequence)),
+            new AfterTurnPipeline([new ReplacingAfterHandler]),
+        );
+
+        $result = $runner->run(
+            new RunRequest(new Turn('exact prompt'), 'fixture', 'workspace'),
+            FixtureContext::make(),
+            new SequencedHarness($sequence),
+            new RecordingExecutionObserver($sequence),
+        );
+
+        self::assertSame(FinalizationStatus::Incomplete, $result->finalizationStatus);
+        self::assertFalse($result->isVerifiedSuccess());
+    }
+}
+
+final readonly class ReplacingAfterHandler implements AfterTurnHandler
+{
+    public function handle(RunRequest $request, TurnContext $context, RunResult $result): RunResult
+    {
+        return RunResult::failed('attempted replacement', 1);
     }
 }
 
