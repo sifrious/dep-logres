@@ -19,6 +19,7 @@ final readonly class RuntimeRequest
         public string $runtime,
         public string $adapter,
         public array $payload,
+        public ?StacksExecutionContext $stacksContext = null,
     ) {
         if (trim($runtime) === '' || trim($adapter) === '') {
             throw new InvalidArgumentException('A runtime request requires a runtime and adapter.');
@@ -27,6 +28,6 @@ final readonly class RuntimeRequest
 
     public static function fromEnvelope(ExecutionEnvelope $envelope): self
     {
-        return new self($envelope->runId, $envelope->attemptId, $envelope->leaseId, $envelope->workspaceIdentity, $envelope->workspacePath, $envelope->repositoryIdentity, $envelope->runtime, $envelope->runtimeAdapter, $envelope->requestPayload);
+        return new self($envelope->runId, $envelope->attemptId, $envelope->leaseId, $envelope->workspaceIdentity, $envelope->workspacePath, $envelope->repositoryIdentity, $envelope->runtime, $envelope->runtimeAdapter, $envelope->requestPayload, $envelope->stacksContext);
     }
 }

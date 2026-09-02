@@ -72,6 +72,7 @@ The package is pre-release. These names define the current consumer surface; sem
 - `RepositoryIdentity`
 - `WorkspaceAuthority`
 - `WorkspacePath`
+- `StacksExecutionContext`
 - `ExecutionGrant`
 - `DispatchAuthorizationSnapshot`
 - `DispatchAuthorizationFailure`

@@ -22,6 +22,7 @@ final class PackageBoundaryTest extends TestCase
             'php' => '^8.3',
             'sifrious/authorization-contract' => 'dev-main',
             'sifrious/reference-contract' => '^1.0',
+            'sifrious/stacks-contract' => '^1.0',
         ], $manifest['require']);
     }
 
