@@ -11,9 +11,15 @@
     },
     "require-dev": {
         "phpstan/phpstan": "^2.2",
-        "phpunit/phpunit": "^12.5"
+        "phpunit/phpunit": "^12.5",
+        "sifrious/harness-contract-fixtures": "^1.0"
     },
     "repositories": [
+        {
+            "name": "harness-contract-fixtures",
+            "type": "vcs",
+            "url": "https://github.com/sifrious/dep-harness-contract-fixtures.git"
+        },
         {
             "type": "vcs",
             "url": "https://github.com/sifrious/dep-authorization-contract.git"
