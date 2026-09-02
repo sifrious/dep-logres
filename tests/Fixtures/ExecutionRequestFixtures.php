@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace Sifrious\Logres\Tests\Fixtures;
 
+use Sifrious\AuthorizationContract\ActorContext;
+use Sifrious\AuthorizationContract\ActorKind;
+use Sifrious\AuthorizationContract\AuthorizationContext;
+use Sifrious\AuthorizationContract\TenantScope;
 use Sifrious\Logres\DeliveryChannel;
 use Sifrious\Logres\ExecutionAttachment;
 use Sifrious\Logres\ExecutionConstraints;
@@ -11,7 +15,7 @@ use Sifrious\Logres\ExecutionContext;
 use Sifrious\Logres\ExecutionPermissions;
 use Sifrious\Logres\ExecutionRequest;
 use Sifrious\Logres\ExecutionRequestId;
-use Sifrious\Logres\RequesterIdentity;
+use Sifrious\ReferenceContract\CrossPackageReference;
 
 final class ExecutionRequestFixtures
 {
@@ -25,7 +29,7 @@ final class ExecutionRequestFixtures
             attachments: [new ExecutionAttachment('artifact:parser-log', 'parser.log')],
             constraints: new ExecutionConstraints(900, ['/workspace/atlas-api']),
             permissions: new ExecutionPermissions(true, true, false),
-            requester: new RequesterIdentity('user:fixture', 'Fixture User'),
+            authorization: self::authorization(),
             channel: DeliveryChannel::Web,
         );
     }
@@ -40,8 +44,16 @@ final class ExecutionRequestFixtures
             attachments: [new ExecutionAttachment('https://example.test/private', '')],
             constraints: new ExecutionConstraints(0, ['/workspace/atlas-api']),
             permissions: new ExecutionPermissions(false, false, true),
-            requester: new RequesterIdentity('', ''),
+            authorization: null,
             channel: DeliveryChannel::Web,
+        );
+    }
+
+    public static function authorization(): AuthorizationContext
+    {
+        return new AuthorizationContext(
+            new ActorContext(new CrossPackageReference('sifrious/zahir', 'account', 'fixture-user'), ActorKind::Human),
+            TenantScope::forTenant('organization', new CrossPackageReference('sifrious/zahir', 'organization', 'tenant-a')),
         );
     }
 }

@@ -56,12 +56,8 @@ final class ExecutionRequestValidator
             }
         }
 
-        if (trim($request->requester->reference) === '') {
-            $failures[] = new ExecutionRequestFailure('requester_reference_required', 'requester.reference', 'A requester reference is required.');
-        }
-
-        if (trim($request->requester->displayName) === '') {
-            $failures[] = new ExecutionRequestFailure('requester_name_required', 'requester.display_name', 'A requester display name is required.');
+        if ($request->authorization === null) {
+            $failures[] = new ExecutionRequestFailure('authorization_context_required', 'authorization', 'Actor and tenant authorization context is required.');
         }
 
         if ($request->relationship === RequestRelationship::Original && $request->parentRequestId !== null) {

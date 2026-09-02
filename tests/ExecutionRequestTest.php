@@ -18,7 +18,6 @@ use Sifrious\Logres\ExecutionRequestResultStatus;
 use Sifrious\Logres\ExecutionRequestStore;
 use Sifrious\Logres\ExecutionRequestSubmission;
 use Sifrious\Logres\ExecutionRequestValidator;
-use Sifrious\Logres\RequesterIdentity;
 use Sifrious\Logres\RequestRelationship;
 use Sifrious\Logres\SubmitExecutionRequest;
 use Sifrious\Logres\Tests\Fixtures\ExecutionRequestFixtures;
@@ -53,8 +52,7 @@ final class ExecutionRequestTest extends TestCase
                 'network_permission_required',
                 'attachment_reference_unsupported',
                 'attachment_name_required',
-                'requester_reference_required',
-                'requester_name_required',
+                'authorization_context_required',
             ],
             array_map(static fn ($failure): string => $failure->code, $result->failures),
         );
@@ -156,7 +154,7 @@ final class ExecutionRequestTest extends TestCase
             attachments: [],
             constraints: new ExecutionConstraints(300),
             permissions: new ExecutionPermissions(false, false, false),
-            requester: new RequesterIdentity('user:fixture', 'Fixture User'),
+            authorization: ExecutionRequestFixtures::authorization(),
             channel: DeliveryChannel::Web,
             relationship: $relationship,
             parentRequestId: $parent,

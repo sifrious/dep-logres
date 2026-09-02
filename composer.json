@@ -5,12 +5,27 @@
     "license": "proprietary",
     "type": "library",
     "require": {
-        "php": "^8.3"
+        "php": "^8.3",
+        "sifrious/authorization-contract": "dev-main",
+        "sifrious/reference-contract": "^1.0"
     },
     "require-dev": {
         "phpstan/phpstan": "^2.2",
         "phpunit/phpunit": "^12.5"
     },
+    "repositories": [
+        {
+            "type": "path",
+            "url": "../dep-authorization-contract",
+            "options": {
+                "symlink": false
+            }
+        },
+        {
+            "type": "vcs",
+            "url": "git@github.com-sifrious:sifrious/dep-reference-contract.git"
+        }
+    ],
     "autoload": {
         "psr-4": {
             "Sifrious\\Logres\\": "src/"

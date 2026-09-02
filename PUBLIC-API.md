@@ -11,7 +11,6 @@ The package is pre-release. These names define the current consumer surface; sem
 - `ExecutionAttachment`
 - `ExecutionConstraints`
 - `ExecutionPermissions`
-- `RequesterIdentity`
 - `DeliveryChannel`
 - `RequestRelationship`
 - `SubmitExecutionRequest`

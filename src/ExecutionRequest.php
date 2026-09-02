@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Sifrious\Logres;
 
+use Sifrious\AuthorizationContract\AuthorizationContext;
+
 final readonly class ExecutionRequest
 {
     public array $attachments;
@@ -16,7 +18,7 @@ final readonly class ExecutionRequest
         array $attachments,
         public ExecutionConstraints $constraints,
         public ExecutionPermissions $permissions,
-        public RequesterIdentity $requester,
+        public ?AuthorizationContext $authorization,
         public DeliveryChannel $channel,
         public RequestRelationship $relationship = RequestRelationship::Original,
         public ?ExecutionRequestId $parentRequestId = null,
