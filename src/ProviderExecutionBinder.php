@@ -15,6 +15,10 @@ final class ProviderExecutionBinder
             return $this->rejectWithoutTransition($run, 'validation_blocked', 'A validation-blocked Run cannot accept a provider acknowledgement.');
         }
 
+        if ($run->providerBindingStatus === ProviderBindingStatus::DispatchFailed) {
+            return $this->rejectWithoutTransition($run, 'dispatch_failed', 'A definitively failed dispatch cannot accept a provider acknowledgement.');
+        }
+
         $target = $run->provenance->targetSelection->target;
 
         if ($acknowledgement->providerExecutionId->provider !== $target->provider
@@ -55,6 +59,10 @@ final class ProviderExecutionBinder
     ): ProviderBindingResult {
         if ($run->providerBindingStatus === ProviderBindingStatus::ValidationBlocked) {
             return $this->rejectWithoutTransition($run, 'validation_blocked', 'A validation-blocked Run cannot be reconciled with a provider execution.');
+        }
+
+        if ($run->providerBindingStatus === ProviderBindingStatus::DispatchFailed) {
+            return $this->rejectWithoutTransition($run, 'dispatch_failed', 'A definitively failed dispatch cannot be reconciled with a provider execution.');
         }
 
         if ($run->providerBindingStatus === ProviderBindingStatus::NotDispatched) {

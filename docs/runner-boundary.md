@@ -35,6 +35,15 @@ Every `RunnerEvent` contains stable Run, Attempt, Lease, Runner, event, sequence
 
 `RunnerLocalStateStore` durably records `received`, `accepted`, `invoking`, `reporting`, and `terminal`, keyed by immutable Run + Attempt + Lease identity. A repeated terminal delivery returns the retained terminal result. A restart that finds accepted, invoking, or reporting work fails closed for reconciliation and cannot silently invoke Wardrobe again. The terminal result is stored before reporting, so loss of a network acknowledgement is never permission to execute twice.
 
+Before runtime invocation, the store atomically reserves both the transport
+execution key and the logical idempotency identity. The reservation carries a
+canonical fingerprint of immutable work excluding replaceable lease authority.
+An exact replay under another lease converges on the existing record; reuse of
+either identity for a different Run, Attempt, routing context, or payload is an
+`idempotency_conflict`. This atomic reservation, rather than a read followed by
+a write, is the concurrency boundary that prevents two workers from invoking
+the same logical work.
+
 Local runner state exists only for reconciliation and duplicate prevention. `ExecutionStateRunnerLifecycle` consumes Logres's canonical state and lease authority; it does not create a competing lifecycle.
 
 ## Outbound-only hosting

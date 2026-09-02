@@ -11,6 +11,7 @@ enum ProviderBindingStatus: string
     case AwaitingAcknowledgement = 'awaiting_acknowledgement';
     case Acknowledged = 'acknowledged';
     case AcknowledgementUncertain = 'acknowledgement_uncertain';
+    case DispatchFailed = 'dispatch_failed';
     case ConflictingAcknowledgement = 'conflicting_acknowledgement';
     case ReconciliationRequired = 'reconciliation_required';
 }
