@@ -53,6 +53,8 @@ Logres requires an explicit, current grant before a Run can enter dispatch. The 
 
 Logres defines provider-neutral runner identity, platform, availability, workload, and capability snapshot contracts. Hosts discover and persist runner observations; Wardrobe remains authoritative for runtime adapter profiles. See [docs/runner-boundary.md](docs/runner-boundary.md).
 
+Application-owned instructions and planning context cross the runner unchanged in `ExecutionEnvelope::requestPayload`. Logres does not interpret that policy. See [docs/execution-payload.md](docs/execution-payload.md).
+
 ## License
 
 Copyright © 2026 Sifrious. All rights reserved. This is publicly viewable

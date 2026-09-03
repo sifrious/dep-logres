@@ -65,11 +65,23 @@ final class RunnerConformanceTest extends TestCase
         self::assertSame(1, $runtime->calls);
         self::assertInstanceOf(RuntimeRequest::class, $runtime->lastRequest);
         self::assertSame('run:test', $runtime->lastRequest->runId->value);
+        self::assertSame($this->planningPayload(), $runtime->lastRequest->payload);
         self::assertSame(
             ['accepted', 'starting', 'running', 'status', 'output', 'question', 'intervention_required', 'artifact_reference', 'terminal_result'],
             array_map(static fn (RunnerEvent $event): string => $event->type->value, $events->events),
         );
         self::assertCount(count($events->events), array_unique(array_map(static fn (RunnerEvent $event): string => $event->id, $events->events)));
+    }
+
+    #[Test]
+    public function application_planning_payload_crosses_the_runner_without_logres_interpreting_it(): void
+    {
+        [$runner, $runtime] = $this->runner();
+
+        $outcome = $runner->execute($this->envelope(), $this->now());
+
+        self::assertTrue($outcome->acceptance->accepted);
+        self::assertSame($this->planningPayload(), $runtime->lastRequest?->payload);
     }
 
     #[Test]
@@ -224,7 +236,21 @@ final class RunnerConformanceTest extends TestCase
             'repository_identity' => 'repository:example.test/repo', 'runtime' => 'agent', 'runtime_adapter' => 'fake',
             'authorization_grant_reference' => 'grant:test', 'issued_at' => '2026-08-29T11:00:00Z', 'expires_at' => '2026-08-29T13:00:00Z',
             'protocol_version' => '1', 'idempotency_identity' => 'dispatch:test', 'authentication_material' => 'signed',
-            'required_capabilities' => ['agent'], 'request_payload' => ['prompt' => 'return ok'],
+            'required_capabilities' => ['agent'], 'request_payload' => $this->planningPayload(),
+        ];
+    }
+
+    private function planningPayload(): array
+    {
+        return [
+            'prompt' => 'return ok',
+            'planning' => [
+                'plan_reference' => 'plan:auth',
+                'desired_state_difference_reference' => 'difference:auth-session',
+                'target_fragment_references' => ['fragment:auth'],
+                'verification_specification_reference' => 'verification:auth',
+                'verification_manifest_hash' => hash('sha256', 'agreed pest source'),
+            ],
         ];
     }
 
