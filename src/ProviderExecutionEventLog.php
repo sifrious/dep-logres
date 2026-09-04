@@ -162,7 +162,7 @@ final readonly class ProviderExecutionEventLog
         }
 
         $existing = $this->artifactAttachments[$key];
-        if ($existing->toArray() === $attachment->toArray()) {
+        if ($this->sameArtifactContract($existing, $attachment)) {
             return $this->artifactAttachments;
         }
 
@@ -173,6 +173,14 @@ final readonly class ProviderExecutionEventLog
                 $this->runId->value,
             )
         );
+    }
+
+    private function sameArtifactContract(RunArtifactAttachment $left, RunArtifactAttachment $right): bool
+    {
+        return $left->artifact->toArray() === $right->artifact->toArray()
+            && $left->status === $right->status
+            && $left->observedIntegrity === $right->observedIntegrity
+            && $left->storageFailure === $right->storageFailure;
     }
 
     /** @param list<array{int, int}> $ranges @return list<array{int, int}> */
