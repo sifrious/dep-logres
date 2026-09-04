@@ -45,6 +45,10 @@ Retry/recovery and cancellation are durable parts of the same aggregate. Failure
 
 The composed package proof and its application-level boundary are documented in [docs/remote-execution-conformance.md](docs/remote-execution-conformance.md).
 
+## Durable agent steps
+
+`AgentStepLoop` performs one recoverable determination and at most one bounded effect per invocation. Determinations are persisted before effects, carry canonical Run/Attempt identity and versioned loop-policy evidence, and resume idempotently after redelivery. Queue and persistence adapters remain host-owned. See [docs/agent-step-loop.md](docs/agent-step-loop.md).
+
 ## Dispatch authorization
 
 Logres requires an explicit, current grant before a Run can enter dispatch. The policy matches canonical repository identity, workspace authority and normalized contained path, selected target, environment, runtime, frozen prompt permissions, actor, grant validity, and target-observation freshness. An allowed decision freezes the approved context on the Run. Capabilities describe what a target can do; only a grant describes what it may do.
