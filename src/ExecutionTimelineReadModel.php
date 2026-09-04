@@ -16,6 +16,7 @@ final readonly class ExecutionTimelineReadModel
         public string $projectedRunStatus,
         public array $items,
         public array $missingSequenceRanges,
+        public array $artifacts = [],
     ) {}
 
     public static function fromProviderLog(ProviderExecutionEventLog $log): self
@@ -36,6 +37,10 @@ final readonly class ExecutionTimelineReadModel
             projectedRunStatus: $log->projectedRunStatus()->value,
             items: $items,
             missingSequenceRanges: $log->missingSequenceRanges,
+            artifacts: array_values(array_map(
+                static fn (RunArtifactAttachment $attachment): array => $attachment->toPublicArray(),
+                $log->artifactAttachments,
+            )),
         );
     }
 }

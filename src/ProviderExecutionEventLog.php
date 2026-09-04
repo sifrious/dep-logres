@@ -14,6 +14,7 @@ final readonly class ProviderExecutionEventLog
      * @param array<string, true> $eventIdentities
      * @param array<int, string> $eventIdentityBySequence
      * @param list<array{int, int}> $missingSequenceRanges
+     * @param array<string, RunArtifactAttachment> $artifactAttachments
      */
     public function __construct(
         public string $invocationId,
@@ -29,6 +30,7 @@ final readonly class ProviderExecutionEventLog
         public int $highestSequence = 0,
         public array $missingSequenceRanges = [],
         public ?int $terminalSequence = null,
+        public array $artifactAttachments = [],
     ) {
         if (trim($this->invocationId) === '' || trim($this->provider) === '') {
             throw new InvalidArgumentException('Provider event logs require invocation and provider identity.');
@@ -100,13 +102,14 @@ final readonly class ProviderExecutionEventLog
         return self::statusForEventType($resolved->type);
     }
 
-    public function appendEnvelopeAndEvent(ProviderExecutionEventEnvelope $envelope, ExecutionEvent $event, string $eventIdentity): self
+    public function appendEnvelopeAndEvent(ProviderExecutionEventEnvelope $envelope, ExecutionEvent $event, string $eventIdentity, ?RunArtifactAttachment $attachment = null): self
     {
         $identities = $this->eventIdentities;
         $identities[$eventIdentity] = true;
         $sequenceIndex = $this->eventIdentityBySequence;
         $sequenceIndex[$event->sequence] = $eventIdentity;
         ksort($sequenceIndex);
+        $attachments = $this->attachArtifact($attachment);
 
         return new self(
             invocationId: $this->invocationId,
@@ -122,6 +125,7 @@ final readonly class ProviderExecutionEventLog
             highestSequence: max($this->highestSequence, $event->sequence),
             missingSequenceRanges: self::resolveMissingRanges(self::registerMissingRange($this->missingSequenceRanges, $this->highestSequence + 1, $event->sequence - 1), $event->sequence),
             terminalSequence: self::terminalSequence($this->terminalSequence, $event),
+            artifactAttachments: $attachments,
         );
     }
 
@@ -141,7 +145,42 @@ final readonly class ProviderExecutionEventLog
             highestSequence: $this->highestSequence,
             missingSequenceRanges: $this->missingSequenceRanges,
             terminalSequence: $this->terminalSequence,
+            artifactAttachments: $this->artifactAttachments,
         );
+    }
+
+    /** @return array<string, RunArtifactAttachment> */
+    private function attachArtifact(?RunArtifactAttachment $attachment): array
+    {
+        if ($attachment === null) {
+            return $this->artifactAttachments;
+        }
+
+        $key = $attachment->artifact->id;
+        if (! isset($this->artifactAttachments[$key])) {
+            return [...$this->artifactAttachments, $key => $attachment];
+        }
+
+        $existing = $this->artifactAttachments[$key];
+        if ($this->sameArtifactContract($existing, $attachment)) {
+            return $this->artifactAttachments;
+        }
+
+        throw new InvalidArgumentException(
+            sprintf(
+                'Artifact [%s] is immutable once attached to Run [%s]; attach a new artifact and link via supersedes_artifact_id.',
+                $key,
+                $this->runId->value,
+            )
+        );
+    }
+
+    private function sameArtifactContract(RunArtifactAttachment $left, RunArtifactAttachment $right): bool
+    {
+        return $left->artifact->toArray() === $right->artifact->toArray()
+            && $left->status === $right->status
+            && $left->observedIntegrity === $right->observedIntegrity
+            && $left->storageFailure === $right->storageFailure;
     }
 
     /** @param list<array{int, int}> $ranges @return list<array{int, int}> */
