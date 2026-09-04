@@ -145,6 +145,14 @@ The package is pre-release. These names define the current consumer surface; sem
 - `RecoveryAction`
 - `RecoveryRecord`
 - `RetryPolicy`
+- `LoopPolicy`
+- `LoopPolicyEvaluator`
+- `LoopPolicyDetermination`
+- `LoopPolicyOutcome`
+- `LoopPolicyClause`
+- `LoopOperation`
+- `LoopObservation`
+- `LoopBudgetRemaining`
 - `CancellationAuthorization`
 - `CancellationIntent`
 - `CancellationKind`
