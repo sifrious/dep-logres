@@ -42,7 +42,7 @@ final readonly class RunnerPollRequest
     {
         $normalized = [];
         foreach ($values as $value) {
-            if (! is_string($value) || trim($value) === '') {
+            if (trim($value) === '') {
                 throw new InvalidArgumentException("Runner poll {$name} must be non-empty strings.");
             }
             $normalized[] = $value;
