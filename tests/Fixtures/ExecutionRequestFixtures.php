@@ -71,10 +71,10 @@ final class ExecutionRequestFixtures
     ): StacksExecutionContext {
         $checkoutId ??= $workspaceId;
         $workspace = new WorkspaceReference(
-            $checkoutId,
+            $workspaceId,
             $repositoryId,
             'github.com/sifrious/atlas-api',
-            $workspaceId,
+            $checkoutId,
             'worktree',
             'available',
             $path,
@@ -85,10 +85,10 @@ final class ExecutionRequestFixtures
         return StacksExecutionContext::capture(
             $workspace,
             new ExecutionProvenance(
-                $checkoutId,
+                $workspaceId,
                 $repositoryId,
                 'github.com/sifrious/atlas-api',
-                $workspaceId,
+                $checkoutId,
                 'worktree',
                 $path,
                 $revision,
