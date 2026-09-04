@@ -21,6 +21,7 @@ final readonly class ExecutionStateReadModel
         public ?array $details,
         public ?array $recovery,
         public ?array $cancellation,
+        public array $needsInputPauses,
     ) {}
 
     public static function fromState(ExecutionState $state): self
@@ -79,6 +80,15 @@ final readonly class ExecutionStateReadModel
                 'confirmed_at' => $state->cancellation->confirmedAt?->format(DATE_ATOM),
                 'partial_result_reference' => $state->cancellation->partialResultReference,
             ],
+            array_map(static fn (NeedsInputPause $pause): array => [
+                'handoff' => $pause->handoff->toArray(),
+                'resume_context' => $pause->resumeContext->jsonSerialize(),
+                'attempt_id' => $pause->attemptId->value,
+                'paused_at' => $pause->pausedAt->format(DATE_ATOM),
+                'status' => $pause->status->value,
+                'resolved_at' => $pause->resolvedAt?->format(DATE_ATOM),
+                'resolution_operation_id' => $pause->resolutionOperationId,
+            ], $state->needsInputPauses),
         );
     }
 

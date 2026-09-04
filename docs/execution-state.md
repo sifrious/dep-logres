@@ -66,6 +66,23 @@ Cancellation requires an explicit `CancellationAuthorization`. Before dispatch i
 
 Request and confirmation replay converge by operation identity. Reusing an identity for different intent rejects with `cancellation_conflict`. A lost provider acknowledgement leaves the requested intent visible and reconcilable rather than pretending cancellation completed. Terminal Runs cannot accept a new cancellation or retry.
 
+## NeedsInput and Elwin handoffs
+
+Elwin owns clarification questions, allowed response shapes, accepted responses, resumable handoff identity, handoff payload, and resume context. Logres consumes those contracts; it does not define parallel clarification or handoff records.
+
+`ExecutionState::pauseForInput` accepts an Elwin `ResumableHandoff` that is awaiting response and references the current Logres Run plus a Logres Turn checkpoint. It releases active Lease authority, keeps the same Attempt active with `needs_input` status, and persists only:
+
+- the versioned Elwin handoff reference;
+- Elwin's opaque `ResumeContext`;
+- the current Attempt identity;
+- Logres pause and resolution status, timestamps, and idempotency operation identity.
+
+The clarification prompt, response shape, response value, and display payload remain reachable through Elwin and are not copied into Logres lifecycle state. Exactly one handoff may be outstanding. Exact pause replay converges; changed or competing handoffs reject.
+
+After Elwin accepts a response, `resumeFromInput` requires a matching resumable handoff and a host-supplied authorization decision. It returns the same Attempt to `ready` and the Run to `preparing`; no retry Attempt or second state machine is created. Elwin-observed expiry maps to Logres `timed_out`, while Logres cancellation remains `cancelled`.
+
+`TurnCheckpointStore` persists the resolved `TurnContext` after invariant preflight and before-turn handlers complete. If the harness raises `NeedsInput`, `TurnRunner` stores that checkpoint and rethrows the pause signal. `TurnRunner::resume` validates the answered Elwin handoff and restores the checkpoint, so completed handlers are not invoked again. MME-1007 owns the surrounding orchestration and delivery. MME-1010 owns limits and expiry policy. Elwin/MME-1496 owns handoff representation. Hosts own browser connections, timers, authentication, storage adapters, and UI.
+
 ## Adapter boundary
 
 Logres guarantees identities, state invariants, transition legality, structured rejection reasons, idempotent mutation semantics, non-secret read models, lineage, and optimistic-concurrency semantics. A host must durably serialize the full aggregate, enforce unique Run identity, implement atomic compare-and-swap on `version`, generate unpredictable lease tokens and unique command identities, provide a trusted clock, and schedule expiry observation. Database locks, unique constraints, HTTP, queues, provider SDKs, and framework models remain host adapters.
