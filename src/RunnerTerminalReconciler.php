@@ -28,17 +28,37 @@ final readonly class RunnerTerminalReconciler
         }
 
         $receipt = $this->sink->report($record->terminalResult);
-        if (in_array($receipt->status, [RunnerTerminalResultDeliveryStatus::Accepted, RunnerTerminalResultDeliveryStatus::Duplicate], true)) {
-            $this->localState->save(new RunnerLocalRecord(
-                $record->executionKey,
-                $record->idempotencyIdentity,
-                $record->envelopeFingerprint,
-                RunnerLocalStage::Terminal,
-                $now,
-                $record->terminalResult,
-            ));
-        }
+        $this->recordReceipt($executionKey, $receipt, $now);
 
         return $receipt;
+    }
+
+    public function recordReceipt(
+        string $executionKey,
+        RunnerTerminalResultReceipt $receipt,
+        DateTimeImmutable $now,
+    ): void {
+        if (! in_array($receipt->status, [RunnerTerminalResultDeliveryStatus::Accepted, RunnerTerminalResultDeliveryStatus::Duplicate], true)) {
+            return;
+        }
+
+        $record = $this->localState->find($executionKey);
+        if ($record === null || $record->terminalResult === null || $record->stage !== RunnerLocalStage::Reporting) {
+            return;
+        }
+        if ($record->terminalResult->runId->value !== $receipt->result->runId->value
+            || $record->terminalResult->attemptId->value !== $receipt->result->attemptId->value
+            || $record->terminalResult->leaseId->value !== $receipt->result->leaseId->value) {
+            return;
+        }
+
+        $this->localState->save(new RunnerLocalRecord(
+            $record->executionKey,
+            $record->idempotencyIdentity,
+            $record->envelopeFingerprint,
+            RunnerLocalStage::Terminal,
+            $now,
+            $record->terminalResult,
+        ));
     }
 }

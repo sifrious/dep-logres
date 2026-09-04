@@ -39,6 +39,8 @@ final class InMemoryRunnerDispatchContracts implements RunnerWorkPoller, RunnerL
     /** @var list<RunnerTerminalResult> */
     public array $reported = [];
 
+    public int $acknowledgementCalls = 0;
+
     /** @var array<string, RunnerLocalRecord> */
     private array $records = [];
 
@@ -71,6 +73,7 @@ final class InMemoryRunnerDispatchContracts implements RunnerWorkPoller, RunnerL
 
     public function acknowledge(RunnerLeaseAcknowledgement $acknowledgement): RunnerLeaseAcknowledgementResult
     {
+        ++$this->acknowledgementCalls;
         $lease = $this->leases[$acknowledgement->leaseId] ?? null;
         if ($lease === null) {
             throw new InvalidArgumentException('Lease not found for acknowledgement.');

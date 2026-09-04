@@ -174,6 +174,9 @@ The package is pre-release. These names define the current consumer surface; sem
 - `RunnerPollResponseStatus`
 - `RunnerPollResponse`
 - `RunnerWorkPoller`
+- `OutboundRunnerLoop`
+- `OutboundRunnerCycleResult`
+- `OutboundRunnerCycleStatus`
 - `ExecutionEnvelope`
 - `EnvelopeAuthenticator`
 - `RunnerAuthorization`
