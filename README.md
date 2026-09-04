@@ -45,6 +45,8 @@ Retry/recovery and cancellation are durable parts of the same aggregate. Failure
 
 Human gates consume Elwin's clarification-acceptance and resumable-handoff contracts. Logres persists only the Elwin handoff reference, opaque resume context, Attempt identity, and pause/resolution lifecycle; it never copies clarification prompts, response shapes, responses, or handoff payloads into execution state. A durable Turn checkpoint prevents completed preflight and before-turn handlers from replaying after an accepted handoff resumes.
 
+Orchestration consumers provide a persisted, versioned `LoopPolicy` rather than embedding limits in their loop. `LoopPolicyEvaluator` produces explicit continue, bounded human-wait, verified-completion, cancellation, authorization-revocation, unresolved-input, and policy-exhaustion determinations with remaining budgets and controlling clauses. See [docs/loop-policy.md](docs/loop-policy.md).
+
 The composed package proof and its application-level boundary are documented in [docs/remote-execution-conformance.md](docs/remote-execution-conformance.md).
 
 ## Dispatch authorization
