@@ -43,11 +43,6 @@ final readonly class AgentStepDetermination
         if ($action === AgentStepAction::Wait && $reenterAt === null) {
             throw new InvalidArgumentException('A waiting Agent Step requires a durable re-entry time.');
         }
-        foreach ($evidence as $reference) {
-            if (! $reference instanceof EvidenceReference) {
-                throw new InvalidArgumentException('Agent Step evidence must use canonical EvidenceReference values.');
-            }
-        }
     }
 
     public function operationIdentity(): string

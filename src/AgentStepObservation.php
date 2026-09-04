@@ -20,11 +20,6 @@ final readonly class AgentStepObservation
         if (trim($operationIdentity) === '') {
             throw new InvalidArgumentException('Agent Step observation requires an operation identity.');
         }
-        foreach ($evidence as $reference) {
-            if (! $reference instanceof EvidenceReference) {
-                throw new InvalidArgumentException('Agent Step observations use canonical EvidenceReference values.');
-            }
-        }
     }
 
     public static function noEffect(AgentStepDetermination $determination, DateTimeImmutable $observedAt): self

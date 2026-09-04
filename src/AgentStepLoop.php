@@ -65,6 +65,12 @@ final readonly class AgentStepLoop
             return new AgentStepCycleResult($record, false);
         }
 
+        $history = $this->steps->history($state->runId);
+        $latest = $history === [] ? null : $history[array_key_last($history)];
+        if ($latest !== null && $latest->determination->sequence > $record->determination->sequence) {
+            return new AgentStepCycleResult($record, false);
+        }
+
         $attempt = $state->currentAttempt() ?? $this->lastAttempt($state);
         $sequence = $record->determination->sequence + 1;
         $next = AgentStepId::forSequence($state->runId, $attempt->id, $sequence);
