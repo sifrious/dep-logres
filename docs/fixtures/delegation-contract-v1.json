@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "parent": {
+    "run_id": "run:parent",
+    "attempt_id": "attempt:parent:4"
+  },
+  "children": [
+    {
+      "delegation_id": "delegation:research-a",
+      "operation_id": "delegation-operation:parent-step-4-a",
+      "child_run_id": "run:child-a",
+      "child_request_id": "request:child-a",
+      "agent": {
+        "contract": "sifrious.cross-package-reference",
+        "contract_version": 1,
+        "owner": "sifrious/orbis",
+        "type": "agent-definition",
+        "id": "researcher",
+        "object_version": "v3",
+        "content_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "bounded_context": {
+        "repository_identity": "repository:logres",
+        "workspace_authority": "workspace:logres",
+        "workspace_path": "/workspace/packages/logres",
+        "environment": "production",
+        "runtime": "php-8.3",
+        "permissions": ["repo:read"]
+      },
+      "authorization": {
+        "decision_id": "delegation-decision:parent-step-4-a",
+        "policy_version": "agent-run-policy:v1",
+        "child_depth": 2,
+        "maximum_depth": 3,
+        "active_children_before": 0,
+        "maximum_concurrent_children": 2
+      },
+      "canonical_execution": {
+        "current_attempt_id": "attempt:child-a:1",
+        "status": "needs_input",
+        "input_request_reference": "input:child-a:1"
+      }
+    },
+    {
+      "delegation_id": "delegation:research-b",
+      "operation_id": "delegation-operation:parent-step-4-b",
+      "child_run_id": "run:child-b",
+      "child_request_id": "request:child-b",
+      "agent": {
+        "contract": "sifrious.cross-package-reference",
+        "contract_version": 1,
+        "owner": "sifrious/orbis",
+        "type": "agent-definition",
+        "id": "reviewer",
+        "object_version": "v5",
+        "content_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      },
+      "bounded_context": {
+        "repository_identity": "repository:logres",
+        "workspace_authority": "workspace:logres",
+        "workspace_path": "/workspace/packages/logres",
+        "environment": "production",
+        "runtime": "php-8.3",
+        "permissions": ["repo:read"]
+      },
+      "authorization": {
+        "decision_id": "delegation-decision:parent-step-4-b",
+        "policy_version": "agent-run-policy:v1",
+        "child_depth": 2,
+        "maximum_depth": 3,
+        "active_children_before": 1,
+        "maximum_concurrent_children": 2
+      },
+      "canonical_execution": {
+        "current_attempt_id": null,
+        "status": "failed",
+        "failure_reason": "child verification failed"
+      }
+    }
+  ]
+}

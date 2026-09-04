@@ -47,6 +47,10 @@ Orchestration consumers provide a persisted, versioned `LoopPolicy` rather than 
 
 The composed package proof and its application-level boundary are documented in [docs/remote-execution-conformance.md](docs/remote-execution-conformance.md).
 
+## Delegation contract
+
+Logres defines one agent-to-agent delegation boundary that creates a child Run from an immutable Orbis agent definition and authority bounded by the parent. The child uses canonical execution attempts; delegation adds inspectable parent-child provenance and no nested execution loop. The contract proposal and fixture are documented in [docs/delegation-contract.md](docs/delegation-contract.md); MME-1010 loop-policy primitives are present, while step-runtime and resumable NeedsInput wiring remain merge-gated on MME-1007 and MME-1299.
+
 ## Dispatch authorization
 
 Logres requires an explicit, current grant before a Run can enter dispatch. The policy matches canonical repository identity, workspace authority and normalized contained path, selected target, environment, runtime, frozen prompt permissions, actor, grant validity, and target-observation freshness. An allowed decision freezes the approved context on the Run. Capabilities describe what a target can do; only a grant describes what it may do.
