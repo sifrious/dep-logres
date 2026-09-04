@@ -18,9 +18,11 @@ use Sifrious\Logres\DispatchAuthorizationSnapshot;
 use Sifrious\Logres\ExecutionRequestId;
 use Sifrious\Logres\ExecutionState;
 use Sifrious\Logres\ExecutionTargetId;
+use Sifrious\Logres\InputRequestReference;
 use Sifrious\Logres\OrbisAgentDefinition;
 use Sifrious\Logres\RepositoryIdentity;
 use Sifrious\Logres\RunId;
+use Sifrious\Logres\RunStatus;
 use Sifrious\Logres\WorkspaceAuthority;
 use Sifrious\Logres\WorkspacePath;
 
@@ -100,6 +102,26 @@ final class DelegationContractTest extends TestCase
         self::assertSame('attempt:child:1', $model->currentAttempt['id']);
         self::assertSame($child->attempts[0]->id->value, $model->attempts[0]['id']);
         self::assertSame('agent-run-policy:v1', $model->policyVersion);
+    }
+
+    #[Test]
+    public function needs_input_is_projected_as_child_evidence_not_a_second_lifecycle(): void
+    {
+        $request = $this->request();
+        $child = new ExecutionState(
+            $request->childRunId,
+            RunStatus::NeedsInput,
+            new DateTimeImmutable('2026-09-04T12:00:00Z'),
+        );
+        $input = new InputRequestReference('input:child:1', 'Choose the contract version.');
+
+        $model = DelegationReadModel::fromCanonicalState($request, $child, $input);
+
+        self::assertSame('needs_input', $model->status);
+        self::assertSame($input->toArray(), $model->needsInput);
+
+        $this->expectException(InvalidArgumentException::class);
+        DelegationReadModel::fromCanonicalState($request, $child);
     }
 
     private function request(): DelegationRequest
