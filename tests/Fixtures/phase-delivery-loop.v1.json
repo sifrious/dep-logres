@@ -247,6 +247,20 @@
       "test_paths": ["tests/RunIdentityConformanceTest.php", "tests/ExecutionStateTest.php"]
     },
     {
+      "id": "T16A",
+      "name": "reserve provider invocation, dispatch, bind acknowledgement, or reconcile",
+      "owning_package": "Logres for policy and identity; host provider adapter for transport",
+      "consumed_contract": ["Logres ProviderInvocationRequest", "Logres ProviderInvocationPersistence", "Logres ProviderDispatch", "Logres ProviderExecutionLookup"],
+      "produced_object_or_event": ["Logres ProviderInvocationRecord", "Run awaiting acknowledgement, acknowledged, dispatch-failed, or reconciliation-required"],
+      "persistence_owner": "Host implements ProviderInvocationPersistence and RunStore with atomic reservation/status transitions and unique provider identity.",
+      "authorization_check": "The Run must carry a frozen DispatchAuthorizationSnapshot matching invocation provenance before reservation or dispatch.",
+      "retry_or_idempotency_boundary": "Invocation ID and idempotency key reserve once; a reserved replay resumes, a dispatching replay becomes acknowledgement-uncertain without redispatch, exact acknowledgement is duplicate-safe, and lookup reconciles the same Run.",
+      "evidence_emitted": "Invocation reservation/status lineage, dispatch outcome, stable provider execution binding, lookup status, timestamps, and failure reason.",
+      "unresolved_gap": "Provider SDK/authentication and factual lookup remain host adapters; Logres contains no live provider client.",
+      "source_paths": ["src/ProviderInvocationRequest.php", "src/ProviderInvocationCoordinator.php", "src/ProviderInvocationPersistence.php", "src/ProviderExecutionBinder.php", "src/Run.php"],
+      "test_paths": ["tests/ProviderInvocationCoordinatorTest.php", "tests/RunIdentityConformanceTest.php", "tests/RemoteExecutionLifecycleConformanceTest.php"]
+    },
+    {
       "id": "T17",
       "name": "deliver and accept an execution envelope",
       "owning_package": "Logres",
@@ -259,6 +273,20 @@
       "unresolved_gap": null,
       "source_paths": ["src/ExecutionEnvelope.php", "src/ExecutionRunner.php", "src/RunnerLocalStateStore.php"],
       "test_paths": ["tests/RunnerConformanceTest.php", "tests/OutboundRunnerLoopTest.php"]
+    },
+    {
+      "id": "T17A",
+      "name": "poll for outbound work and acknowledge the offered lease",
+      "owning_package": "Logres for poll/ack contracts and lease policy; host for authenticated transport",
+      "consumed_contract": ["Logres RunnerPollRequest", "Logres RunnerWorkPoller", "Logres RunnerLeaseAcknowledgement"],
+      "produced_object_or_event": ["Logres RunnerPollResponse with lease or no-work", "Logres RunnerLeaseAcknowledgementResult"],
+      "persistence_owner": "ExecutionStateStore owns the offered Lease; host transport persists no competing queue lifecycle.",
+      "authorization_check": "Runner identity and compatibility must match the offered envelope/target; lease acknowledgement must match Run, Attempt, Lease, and runner.",
+      "retry_or_idempotency_boundary": "No-work supplies a bounded retry delay; acknowledgement identity is deterministically hashed from Run + Attempt + Lease and exact replay converges.",
+      "evidence_emitted": "Poll identity, offered envelope/lease, no-work reason/retry delay, and acknowledgement status.",
+      "unresolved_gap": "Authenticated HTTP polling and the application proof that concurrent polls yield one Lease remain host integration work.",
+      "source_paths": ["src/OutboundRunnerLoop.php", "src/RunnerPollRequest.php", "src/RunnerPollResponse.php", "src/RunnerLeaseAcknowledger.php"],
+      "test_paths": ["tests/OutboundRunnerLoopTest.php", "tests/RunnerLifecycleTest.php", "tests/RunnerDispatchContractsTest.php"]
     },
     {
       "id": "T18",
@@ -275,14 +303,28 @@
       "test_paths": ["tests/RunnerConformanceTest.php"]
     },
     {
+      "id": "T18A",
+      "name": "retain, report, and reconcile the runner terminal result",
+      "owning_package": "Logres",
+      "consumed_contract": ["Logres RunnerTerminalResult", "Logres RunnerTerminalResultSink", "Logres RunnerLocalStateStore"],
+      "produced_object_or_event": ["Logres RunnerTerminalResultReceipt", "runner local reporting or terminal stage"],
+      "persistence_owner": "RunnerLocalStateStore saves the terminal result before network delivery; host sink persists the corresponding canonical execution consequence.",
+      "authorization_check": "Terminal delivery is correlated to the immutable Run, Attempt, and Lease accepted by the runner.",
+      "retry_or_idempotency_boundary": "Lost receipt leaves local state at reporting; RunnerTerminalReconciler redelivers the retained result without invoking Wardrobe again; accepted/duplicate receipt converges to terminal.",
+      "evidence_emitted": "Retained terminal status, result payload, delivery receipt, and local reporting/terminal stage.",
+      "unresolved_gap": null,
+      "source_paths": ["src/RunnerTerminalResult.php", "src/RunnerTerminalResultSink.php", "src/RunnerTerminalReconciler.php", "src/RunnerLocalStateStore.php", "src/OutboundRunnerLoop.php"],
+      "test_paths": ["tests/OutboundRunnerLoopTest.php", "tests/RunnerConformanceTest.php"]
+    },
+    {
       "id": "T19",
-      "name": "bind provider identity and normalize execution events",
+      "name": "normalize execution events and append history",
       "owning_package": "Logres for live execution semantics; Funes for durable history",
-      "consumed_contract": ["Logres ProviderAcknowledgement", "Logres ProviderExecutionEventEnvelope", "Funes EventEnvelope/ObservationDraft"],
-      "produced_object_or_event": ["Logres provider binding", "Logres ExecutionEvent and timeline", "Funes accepted Observation/HistoricalAppend"],
-      "persistence_owner": "Logres host implements provider binding/event stores; Funes SQL stores own append-only observations/history.",
+      "consumed_contract": ["Logres ProviderExecutionEventEnvelope", "Funes EventEnvelope/ObservationDraft"],
+      "produced_object_or_event": ["Logres ExecutionEvent and timeline", "Funes accepted Observation/HistoricalAppend"],
+      "persistence_owner": "Logres host implements event storage; Funes SQL stores own append-only observations/history.",
       "authorization_check": "Logres checks run/task/attempt/invocation/provider association; Funes HistoricalAppendAuthorization checks tenant/scope append authority.",
-      "retry_or_idempotency_boundary": "Exact acknowledgement replay is stable; event IDs deduplicate at-least-once delivery; Funes identity/append conflicts reject changed replay.",
+      "retry_or_idempotency_boundary": "Event IDs deduplicate at-least-once delivery; Funes identity/append conflicts reject changed replay.",
       "evidence_emitted": "Original provider envelope, normalized event taxonomy, sequence gaps/reordering, typed references, provenance, and historical records.",
       "unresolved_gap": "The Logres-to-Funes projection adapter is not published.",
       "source_paths": ["src/ProviderExecutionBinder.php", "src/ProviderExecutionEventReceiver.php", "src/ExecutionEvent.php", "dep-funes/src/Value/Observation.php", "dep-funes/src/Graph/HistoricalAppender.php"],
