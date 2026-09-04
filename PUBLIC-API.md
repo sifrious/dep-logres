@@ -254,6 +254,7 @@ Consumers depend on `HarnessInterface`. `AbstractHarness` is optional shared inv
 - `LoopHandoffReference`
 - `LoopExternalWorkReference`
 - `LoopInterventionReference`
+- `LoopVerificationBinding`
 - `LoopTaskComposition`
 - `LoopDisposition`
 - `LoopDetermination`

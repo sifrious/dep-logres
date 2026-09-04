@@ -37,7 +37,7 @@ final readonly class LoopHandoffReference
             $this->type->value,
             $this->artifactReference,
             $this->originReference,
-            $this->taskId?->value ?? '',
+            $this->taskId === null ? '' : $this->taskId->value,
             $this->contentHash,
         ]));
     }

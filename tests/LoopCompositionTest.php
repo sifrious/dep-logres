@@ -20,7 +20,9 @@ use Sifrious\Logres\LoopDisposition;
 use Sifrious\Logres\LoopExternalWorkReference;
 use Sifrious\Logres\LoopHandoffReference;
 use Sifrious\Logres\LoopHandoffType;
+use Sifrious\Logres\LoopInterventionReference;
 use Sifrious\Logres\LoopTaskComposition;
+use Sifrious\Logres\LoopVerificationBinding;
 use Sifrious\Logres\RequiredVerificationOutcome;
 use Sifrious\Logres\RunEvidence;
 use Sifrious\Logres\RunResult;
@@ -66,9 +68,9 @@ final class LoopCompositionTest extends TestCase
             'linear',
             'MME-2273',
             'authorization:linear-write',
-            'linear:create:task-inspect',
         );
         [$result, $verification] = $this->verifiedResult(withEvidence: true);
+        $run = RunIdentityFixtures::run();
 
         $loop = new LoopComposition(
             request: $this->request(),
@@ -80,9 +82,9 @@ final class LoopCompositionTest extends TestCase
                 $task,
                 $handoff,
                 $external,
-                RunIdentityFixtures::run(),
+                $run,
                 $result,
-                $verification,
+                new LoopVerificationBinding($task->id, $run->id, $verification),
             )],
         );
 
@@ -91,9 +93,9 @@ final class LoopCompositionTest extends TestCase
         self::assertSame('decision:scope-cut', $loop->checkpoints[1]->decisionReference);
         self::assertSame($plan->id->value, $loop->phaseHandoffs[0]->originReference);
         self::assertSame($task->id->value, $loop->tasks[0]->handoff?->taskId?->value);
-        self::assertSame('linear:create:task-inspect', $loop->tasks[0]->externalWork?->idempotencyIdentity);
+        self::assertStringStartsWith('external-work:', $loop->tasks[0]->externalWork?->idempotencyIdentity ?? '');
         self::assertSame('run:fixture-001', $loop->tasks[0]->run?->id->value);
-        self::assertSame('test_execution', $loop->tasks[0]->verification?->evidence[0]->kind);
+        self::assertSame('test_execution', $loop->tasks[0]->verification?->outcome->evidence[0]->kind);
     }
 
     #[Test]
@@ -120,6 +122,7 @@ final class LoopCompositionTest extends TestCase
             array_map(static fn ($id): string => $id->value, $plan->task($plan->tasks[2]->id)->dependencies),
         );
         self::assertSame('task:verify', $loop->tasks[0]->task->id->value);
+        self::assertSame('task:define', $loop->determination->taskId?->value);
     }
 
     #[Test]
@@ -128,10 +131,11 @@ final class LoopCompositionTest extends TestCase
         $task = TaskPlanFixtures::fourTasks()->tasks[0]->withStatus(TaskStatus::Succeeded);
         $plan = new TaskPlan(TaskPlanFixtures::fourTasks()->id, $task->requestId, [$task]);
         [$result, $verification] = $this->failedVerification();
+        $run = RunIdentityFixtures::run();
 
         $loop = $this->materializedLoop(
             $plan,
-            [new LoopTaskComposition($task, $this->ticketHandoff($task->id->value), run: RunIdentityFixtures::run(), result: $result, verification: $verification)],
+            [new LoopTaskComposition($task, $this->ticketHandoff($task->id->value), run: $run, result: $result, verification: new LoopVerificationBinding($task->id, $run->id, $verification))],
         );
 
         self::assertSame(LoopDisposition::Rework, $loop->determination->disposition);
@@ -145,10 +149,11 @@ final class LoopCompositionTest extends TestCase
         $task = TaskPlanFixtures::fourTasks()->tasks[0]->withStatus(TaskStatus::Succeeded);
         $plan = new TaskPlan(TaskPlanFixtures::fourTasks()->id, $task->requestId, [$task]);
         [$result, $verification] = $this->verifiedResult(withEvidence: false);
+        $run = RunIdentityFixtures::run();
 
         $loop = $this->materializedLoop(
             $plan,
-            [new LoopTaskComposition($task, $this->ticketHandoff($task->id->value), run: RunIdentityFixtures::run(), result: $result, verification: $verification)],
+            [new LoopTaskComposition($task, $this->ticketHandoff($task->id->value), run: $run, result: $result, verification: new LoopVerificationBinding($task->id, $run->id, $verification))],
         );
 
         self::assertSame(LoopDisposition::Advance, $loop->determination->disposition);
@@ -156,26 +161,83 @@ final class LoopCompositionTest extends TestCase
     }
 
     #[Test]
+    public function a_failed_run_result_reworks_its_task_without_waiting_for_a_second_failure_signal(): void
+    {
+        $task = TaskPlanFixtures::fourTasks()->tasks[0]->withStatus(TaskStatus::Succeeded);
+        $plan = new TaskPlan(TaskPlanFixtures::fourTasks()->id, $task->requestId, [$task]);
+
+        $loop = $this->materializedLoop(
+            $plan,
+            [new LoopTaskComposition(
+                $task,
+                $this->ticketHandoff($task->id->value),
+                run: RunIdentityFixtures::run(),
+                result: RunResult::failed('Execution failed.', 1),
+            )],
+        );
+
+        self::assertSame(LoopDisposition::Rework, $loop->determination->disposition);
+        self::assertSame($task->id->value, $loop->determination->taskId?->value);
+    }
+
+    #[Test]
+    public function waiting_work_only_clarifies_when_elwin_supplies_the_owning_reference(): void
+    {
+        $task = TaskPlanFixtures::fourTasks()->tasks[0]
+            ->withStatus(TaskStatus::WaitingForInput);
+        $plan = new TaskPlan(TaskPlanFixtures::fourTasks()->id, $task->requestId, [$task]);
+        $tasks = [new LoopTaskComposition($task, $this->ticketHandoff($task->id->value))];
+
+        $waiting = $this->materializedLoop($plan, $tasks);
+        $clarifying = new LoopComposition(
+            request: $this->request(),
+            decisionReferences: ['decision:architecture', 'decision:scope-cut'],
+            checkpoints: $this->checkpoints(),
+            plan: $plan,
+            phaseHandoffs: [$this->phaseHandoff($plan->id->value)],
+            tasks: $tasks,
+            intervention: new LoopInterventionReference(LoopDisposition::Clarify, 'clarification:question-1', $task->id),
+        );
+
+        self::assertSame(LoopDisposition::Advance, $waiting->determination->disposition);
+        self::assertSame(LoopDisposition::Clarify, $clarifying->determination->disposition);
+        self::assertSame('clarification:question-1', $clarifying->determination->decisionReference);
+    }
+
+    #[Test]
+    public function verification_cannot_be_attached_to_a_different_run(): void
+    {
+        $task = TaskPlanFixtures::fourTasks()->tasks[0]->withStatus(TaskStatus::Succeeded);
+        [$result, $verification] = $this->verifiedResult(withEvidence: true);
+        $run = RunIdentityFixtures::run();
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Verification must retain');
+
+        new LoopTaskComposition(
+            $task,
+            $this->ticketHandoff($task->id->value),
+            run: $run,
+            result: $result,
+            verification: new LoopVerificationBinding($task->id, RunIdentityFixtures::run('other')->id, $verification),
+        );
+    }
+
+    #[Test]
     public function replay_projects_the_same_existing_objects_and_idempotency_identities(): void
     {
         $plan = TaskPlanFixtures::fourTasks();
-        $tasks = array_map(
+        $composeTasks = fn (): array => array_map(
             fn ($task): LoopTaskComposition => new LoopTaskComposition(
                 $task,
                 $this->ticketHandoff($task->id->value),
-                new LoopExternalWorkReference(
-                    $task->id,
-                    'linear',
-                    'ticket:'.$task->id->value,
-                    'authorization:linear-write',
-                    'linear:create:'.$task->id->value,
-                ),
+                new LoopExternalWorkReference($task->id, 'linear', 'ticket:'.$task->id->value, 'authorization:linear-write'),
             ),
             $plan->tasks,
         );
 
-        $first = $this->materializedLoop($plan, $tasks);
-        $replay = $this->materializedLoop($plan, $tasks);
+        $first = $this->materializedLoop($plan, $composeTasks());
+        $replay = $this->materializedLoop($plan, $composeTasks());
 
         self::assertEquals($first, $replay);
         self::assertSame($plan, $replay->plan);

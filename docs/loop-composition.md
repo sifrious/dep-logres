@@ -15,7 +15,8 @@ The composition joins:
 - adapter-owned work-item mappings through `LoopExternalWorkReference`;
 - Logres-owned current execution and normalized results through `Run` and
   `RunResult`; and
-- independently observed verification and evidence through `VerifiedOutcome`.
+- independently observed verification and evidence through a
+  `LoopVerificationBinding` to the existing `VerifiedOutcome`.
 
 There is no MCP schema or serialization contract here. MME-2272 adapters project
 this domain value without becoming authoritative for it.
@@ -30,13 +31,15 @@ and creates no empty plan, task, handoff, external ticket, or Run.
 Phase handoffs retain the originating plan reference. Ticket handoffs retain the
 originating task and derive a stable content identity. An external provider
 mapping records both explicit write authorization and an idempotency identity;
-the composition never performs the write.
+the identity is derived from the provider and canonical task so replay cannot
+silently choose another key. The composition never performs the write.
 
 ## Determination
 
 The composition derives only cross-object disposition:
 
-- explicit owner determinations can clarify, escalate, or stop;
+- explicit owner determinations can clarify, escalate, or stop; waiting state
+  alone does not author an Elwin clarification;
 - failed execution or required verification reworks the owning task;
 - unavailable required verification escalates;
 - cancellation stops;

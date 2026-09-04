@@ -26,10 +26,10 @@ final readonly class LoopComposition
     public LoopDetermination $determination;
 
     /**
-     * @param list<string> $decisionReferences
-     * @param list<LoopCheckpoint> $checkpoints
-     * @param list<LoopHandoffReference> $phaseHandoffs
-     * @param list<LoopTaskComposition> $tasks
+     * @param array<array-key, mixed> $decisionReferences
+     * @param array<array-key, mixed> $checkpoints
+     * @param array<array-key, mixed> $phaseHandoffs
+     * @param array<array-key, mixed> $tasks
      */
     public function __construct(
         public ExecutionRequest $request,
@@ -110,6 +110,11 @@ final readonly class LoopComposition
             $planned[$task->id->value] = $task;
         }
 
+        if ($this->intervention?->taskId !== null
+            && ! isset($planned[$this->intervention->taskId->value])) {
+            throw new InvalidArgumentException('A task-scoped intervention must identify a task in the composed plan.');
+        }
+
         $composed = [];
         $runIds = [];
         $handoffIds = [];
@@ -176,38 +181,65 @@ final readonly class LoopComposition
         usort($tasks, static fn (LoopTaskComposition $left, LoopTaskComposition $right): int => $left->task->id->value <=> $right->task->id->value);
 
         foreach ($tasks as $task) {
-            if ($task->task->status === TaskStatus::WaitingForInput) {
-                return new LoopDetermination(LoopDisposition::Clarify, 'The owning task is waiting for explicit input.', $task->task->id);
-            }
             if ($task->task->status === TaskStatus::Canceled) {
                 return new LoopDetermination(LoopDisposition::Stop, 'The owning task was canceled.', $task->task->id);
             }
-            if ($task->verification?->requiredVerification === RequiredVerificationOutcome::Unavailable) {
+            if ($task->result?->status === RunStatus::Cancelled) {
+                return new LoopDetermination(LoopDisposition::Stop, 'The owning Run was canceled.', $task->task->id);
+            }
+            if ($task->result?->status === RunStatus::ProviderError) {
+                return new LoopDetermination(LoopDisposition::Escalate, 'The provider returned a terminal execution error.', $task->task->id);
+            }
+            if ($task->verification?->outcome->requiredVerification === RequiredVerificationOutcome::Unavailable) {
                 return new LoopDetermination(LoopDisposition::Escalate, 'Required verification is unavailable.', $task->task->id);
             }
             if ($task->task->status === TaskStatus::Failed
-                || $task->verification?->requiredVerification === RequiredVerificationOutcome::Failed) {
+                || in_array($task->result?->status, [RunStatus::Failed, RunStatus::TimedOut], true)
+                || $task->verification?->outcome->requiredVerification === RequiredVerificationOutcome::Failed) {
                 return new LoopDetermination(LoopDisposition::Rework, 'Execution or required verification failed for the owning task.', $task->task->id);
             }
         }
 
         foreach ($tasks as $task) {
-            if ($task->task->status === TaskStatus::Skipped) {
-                continue;
-            }
-            if ($task->task->status !== TaskStatus::Succeeded || ! $task->hasVerifiedEvidence()) {
+            if ($task->task->status === TaskStatus::Succeeded && ! $task->hasVerifiedEvidence()) {
                 return new LoopDetermination(
                     LoopDisposition::Advance,
-                    'At least one task has not satisfied its result, verification, and evidence contracts.',
+                    'A completed task has not satisfied its result, verification, and evidence contracts.',
                     $task->task->id,
                 );
+            }
+        }
+
+        foreach ($tasks as $task) {
+            if (in_array($task->task->status, [TaskStatus::Running, TaskStatus::WaitingForInput], true)) {
+                return new LoopDetermination(
+                    LoopDisposition::Advance,
+                    $task->task->status === TaskStatus::WaitingForInput
+                        ? 'The task is waiting for an Elwin-owned clarification determination.'
+                        : 'The task is currently executing.',
+                    $task->task->id,
+                );
+            }
+        }
+
+        foreach ($tasks as $task) {
+            if ($task->task->status === TaskStatus::Planned
+                && $this->plan->readiness($task->task->id) === TaskReadiness::Ready) {
+                return new LoopDetermination(LoopDisposition::Advance, 'The task is ready for its next authorized action.', $task->task->id);
+            }
+        }
+
+        foreach ($tasks as $task) {
+            if ($task->task->status !== TaskStatus::Skipped
+                && ($task->task->status !== TaskStatus::Succeeded || ! $task->hasVerifiedEvidence())) {
+                return new LoopDetermination(LoopDisposition::Advance, 'Remaining work is blocked by explicit task dependencies.');
             }
         }
 
         return new LoopDetermination(LoopDisposition::Complete, 'Every materialized task satisfied its completion and evidence contracts.');
     }
 
-    /** @param list<string> $references @return list<string> */
+    /** @param array<array-key, mixed> $references @return list<string> */
     private function decisionReferences(array $references): array
     {
         foreach ($references as $reference) {
@@ -223,7 +255,7 @@ final readonly class LoopComposition
         return array_values($references);
     }
 
-    /** @param list<mixed> $checkpoints @return list<LoopCheckpoint> */
+    /** @param array<array-key, mixed> $checkpoints @return list<LoopCheckpoint> */
     private function checkpoints(array $checkpoints): array
     {
         foreach ($checkpoints as $checkpoint) {
@@ -239,10 +271,10 @@ final readonly class LoopComposition
             throw new InvalidArgumentException('Loop checkpoint types and sequences cannot be duplicated.');
         }
 
-        return array_values($checkpoints);
+        return $checkpoints;
     }
 
-    /** @param list<mixed> $handoffs @return list<LoopHandoffReference> */
+    /** @param array<array-key, mixed> $handoffs @return list<LoopHandoffReference> */
     private function phaseHandoffs(array $handoffs): array
     {
         $identities = [];
@@ -259,7 +291,7 @@ final readonly class LoopComposition
         return array_values($handoffs);
     }
 
-    /** @param list<mixed> $tasks @return list<LoopTaskComposition> */
+    /** @param array<array-key, mixed> $tasks @return list<LoopTaskComposition> */
     private function taskCompositions(array $tasks): array
     {
         $identities = [];
