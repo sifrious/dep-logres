@@ -7,6 +7,9 @@ namespace Sifrious\Logres\Tests;
 use DateTimeImmutable;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Sifrious\Elwin\Handoff\HandoffPayload;
+use Sifrious\Elwin\Handoff\ResumableHandoff;
+use Sifrious\Elwin\Handoff\ResumeContext;
 use Sifrious\Logres\AbstractHarness;
 use Sifrious\Logres\AfterTurnHandler;
 use Sifrious\Logres\AfterTurnPipeline;
@@ -21,6 +24,8 @@ use Sifrious\Logres\HarnessCapability;
 use Sifrious\Logres\HarnessHandle;
 use Sifrious\Logres\HarnessProbe;
 use Sifrious\Logres\HarnessStatus;
+use Sifrious\Logres\HumanGate;
+use Sifrious\Logres\HumanInputAuthorization;
 use Sifrious\Logres\InvariantBeforeTurnHandler;
 use Sifrious\Logres\InvariantPreflight;
 use Sifrious\Logres\InvariantPreflightPhase;
@@ -31,9 +36,12 @@ use Sifrious\Logres\RequiredVerificationOutcome;
 use Sifrious\Logres\RunRequest;
 use Sifrious\Logres\RunResult;
 use Sifrious\Logres\RunId;
+use Sifrious\Logres\NeedsInput;
 use Sifrious\Logres\Turn;
 use Sifrious\Logres\TurnContext;
 use Sifrious\Logres\TurnRunner;
+use Sifrious\Logres\Tests\Fixtures\InMemoryTurnCheckpointStore;
+use Sifrious\ReferenceContract\CrossPackageReference;
 use UnexpectedValueException;
 
 final class TurnRunnerTest extends TestCase
@@ -138,6 +146,68 @@ final class TurnRunnerTest extends TestCase
 
         self::assertSame(FinalizationStatus::Incomplete, $result->finalizationStatus);
         self::assertFalse($result->isVerifiedSuccess());
+    }
+
+    #[Test]
+    public function resume_uses_the_elwin_checkpoint_without_replaying_completed_handlers(): void
+    {
+        $sequence = new Sequence;
+        $checkpoints = new InMemoryTurnCheckpointStore();
+        $request = new RunRequest(new Turn('exact prompt'), 'pausing-fixture', 'workspace', 'run:turn:1');
+        $at = new DateTimeImmutable('2026-09-04T12:00:00Z');
+        $handoff = new ResumableHandoff(
+            'handoff:turn:1',
+            new CrossPackageReference('sifrious/elwin', 'conversation', 'conversation:1'),
+            new CrossPackageReference('sifrious/logres', 'run', $request->identity()),
+            new CrossPackageReference('sifrious/elwin', 'question', 'question:1'),
+            new ResumeContext(
+                'resume-secret',
+                new CrossPackageReference('sifrious/logres', 'turn-checkpoint', 'checkpoint:turn:1'),
+            ),
+            new HandoffPayload('sifrious.elwin.intervention-context/v1', ['summary' => 'Continue?']),
+            $at,
+            $at->modify('+1 hour'),
+        );
+        $runner = new TurnRunner(
+            new InvariantPreflight([
+                new SequencedInvariantHandler(InvariantPreflightPhase::Authorization, $sequence),
+                new SequencedInvariantHandler(InvariantPreflightPhase::Workspace, $sequence),
+                new SequencedInvariantHandler(InvariantPreflightPhase::Provenance, $sequence),
+            ]),
+            new BeforeTurnPipeline([new SequencedBeforeHandler($sequence)]),
+            new InvariantFinalization(FinalizationFixtures::passing($sequence)),
+            new AfterTurnPipeline([new SequencedAfterHandler($sequence)]),
+            checkpoints: $checkpoints,
+        );
+        $harness = new PausingHarness($sequence, $handoff);
+        $observer = new RecordingExecutionObserver($sequence);
+
+        try {
+            $runner->run($request, FixtureContext::make(), $harness, $observer);
+            self::fail('The first invocation should pause.');
+        } catch (NeedsInput $pause) {
+            self::assertSame('handoff:turn:1', $pause->handoff->id);
+        }
+
+        $answered = $handoff->answer(
+            new CrossPackageReference('sifrious/elwin', 'response', 'response:1'),
+            $at->modify('+1 minute'),
+        );
+        $result = $runner->resume(
+            $request,
+            $answered,
+            HumanInputAuthorization::allow(),
+            $at->modify('+2 minutes'),
+            $harness,
+            $observer,
+        );
+
+        self::assertSame(RunStatus::Succeeded, $result->status);
+        self::assertSame(RequiredVerificationOutcome::Passed, $result->requiredVerification);
+        self::assertSame(1, count(array_filter($sequence->events, static fn (string $event): bool => $event === 'before')));
+        self::assertSame(1, count(array_filter($sequence->events, static fn (string $event): bool => $event === 'context')));
+        self::assertSame(2, count(array_filter($sequence->events, static fn (string $event): bool => $event === 'start')));
+        self::assertSame(1, count(array_filter($sequence->events, static fn (string $event): bool => $event === 'invariant:Authorization')));
     }
 }
 
@@ -297,6 +367,43 @@ final class SequencedHarness extends AbstractHarness
         $this->sequence->events[] = 'start';
 
         return new HarnessHandle('attempt-1', $this->id(), new DateTimeImmutable('2026-08-27T12:00:00+00:00'));
+    }
+}
+
+final class PausingHarness extends AbstractHarness
+{
+    private bool $paused = false;
+
+    public function __construct(
+        private readonly Sequence $sequence,
+        private readonly ResumableHandoff $handoff,
+    ) {
+        parent::__construct('pausing-fixture', new HarnessCapability('fixture', true, true, true, false));
+    }
+
+    public function probe(): HarnessProbe
+    {
+        return HarnessProbe::available(new EnvironmentSnapshot('fixture-os', '0.1.0', 'fixture-1', '/bin/fixture'));
+    }
+
+    public function status(HarnessHandle $handle, ExecutionObserver $observer): HarnessStatus
+    {
+        $this->sequence->events[] = 'status:succeeded';
+
+        return HarnessStatus::terminal(RunResult::succeeded('complete'));
+    }
+
+    public function cancel(HarnessHandle $handle): void {}
+
+    protected function startHarness(RunRequest $request, TurnContext $context, ExecutionObserver $observer): HarnessHandle
+    {
+        $this->sequence->events[] = 'start';
+        if (! $this->paused) {
+            $this->paused = true;
+            HumanGate::pause($this->handoff);
+        }
+
+        return new HarnessHandle('attempt-1', $this->id(), new DateTimeImmutable('2026-09-04T12:02:00Z'));
     }
 }
 

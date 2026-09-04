@@ -8,32 +8,63 @@
         "php": "^8.3",
         "sifrious/authorization-contract": "dev-main",
         "sifrious/reference-contract": "^1.0",
-        "sifrious/stacks-contract": "^1.0"
+        "sifrious/stacks-contract": "^1.0",
+        "sifrious/elwin": "dev-cursor/resumable-handoffs-b1d5#9667abdef4ea97e532ea557b36fa944b2572732b",
+        "sifrious/elwin-clarification-contract": "dev-pr-9",
+        "quain/core": "dev-main"
     },
     "require-dev": {
         "phpstan/phpstan": "^2.2",
         "phpunit/phpunit": "^12.5",
         "sifrious/harness-contract-fixtures": "^1.0"
     },
-    "repositories": [
-        {
+    "repositories": {
+        "elwin-clarification": {
+            "type": "package",
+            "package": {
+                "name": "sifrious/elwin-clarification-contract",
+                "version": "dev-pr-9",
+                "dist": {
+                    "url": "https://github.com/sifrious/dep-elwin/archive/ccb6cdceadecf0cb987724eddc2d2a2b28852385.zip",
+                    "type": "zip"
+                },
+                "autoload": {
+                    "psr-4": {
+                        "Sifrious\\Elwin\\Clarification\\": "src/Clarification/"
+                    }
+                },
+                "require": {
+                    "php": "^8.3",
+                    "sifrious/reference-contract": "^1.0"
+                }
+            }
+        },
+        "quain": {
+            "type": "vcs",
+            "url": "https://github.com/sifrious/quain.git"
+        },
+        "elwin": {
+            "type": "vcs",
+            "url": "https://github.com/sifrious/dep-elwin.git"
+        },
+        "0": {
             "type": "path",
             "url": "contracts/stacks-contract"
         },
-        {
+        "1": {
             "name": "harness-contract-fixtures",
             "type": "vcs",
             "url": "https://github.com/sifrious/dep-harness-contract-fixtures.git"
         },
-        {
+        "2": {
             "type": "vcs",
             "url": "https://github.com/sifrious/dep-authorization-contract.git"
         },
-        {
+        "3": {
             "type": "vcs",
             "url": "https://github.com/sifrious/dep-reference-contract.git"
         }
-    ],
+    },
     "autoload": {
         "psr-4": {
             "Sifrious\\Logres\\": "src/"

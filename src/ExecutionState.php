@@ -6,6 +6,8 @@ namespace Sifrious\Logres;
 
 use DateTimeImmutable;
 use InvalidArgumentException;
+use Sifrious\Elwin\Handoff\HandoffStatus;
+use Sifrious\Elwin\Handoff\ResumableHandoff;
 
 final readonly class ExecutionState
 {
@@ -25,6 +27,8 @@ final readonly class ExecutionState
         public ?ExecutionStateDetails $details = null,
         public ?RecoveryRecord $recovery = null,
         public ?CancellationIntent $cancellation = null,
+        /** @var list<NeedsInputPause> */
+        public array $needsInputPauses = [],
     ) {
         if ($version < 0) {
             throw new InvalidArgumentException('Execution-state version cannot be negative.');
@@ -36,6 +40,13 @@ final readonly class ExecutionState
             if ($attempt->runId->value !== $runId->value) {
                 throw new InvalidArgumentException('Every Attempt must belong to this Run.');
             }
+        }
+        $waiting = array_filter($needsInputPauses, static fn (NeedsInputPause $pause): bool => $pause->status === NeedsInputPauseStatus::Waiting);
+        if (count($waiting) > 1) {
+            throw new InvalidArgumentException('A Run cannot have more than one outstanding NeedsInput handoff.');
+        }
+        if ($waiting !== [] && $status !== RunStatus::NeedsInput) {
+            throw new InvalidArgumentException('An outstanding handoff requires needs_input Run state.');
         }
     }
 
@@ -109,6 +120,117 @@ final readonly class ExecutionState
         $next = new ExecutionAttempt($attempt->id, $attempt->runId, $attempt->number, AttemptStatus::Running, $attempt->createdAt, $attempt->previousAttemptId, $attempt->leases, $now);
 
         return $this->replaceAttempt($next)->copy(status: RunStatus::Running, startedAt: $this->startedAt ?? $now);
+    }
+
+    public function pauseForInput(ResumableHandoff $handoff, AttemptId $attemptId, ?LeaseToken $token = null): self
+    {
+        if (! $handoff->isAwaitingResponseAt($handoff->requestedAt)) {
+            $this->reject(ExecutionStateRejectionReason::InputNotPending, 'Only an Elwin handoff awaiting a response can pause execution.');
+        }
+        if ($handoff->pausedWork->owner !== 'sifrious/logres' || $handoff->pausedWork->type !== 'run' || $handoff->pausedWork->id !== $this->runId->value) {
+            $this->reject(ExecutionStateRejectionReason::InputQuestionConflict, 'The Elwin handoff does not reference this Logres Run.');
+        }
+        if ($handoff->resumeContext->checkpoint->owner !== 'sifrious/logres' || $handoff->resumeContext->checkpoint->type !== 'turn-checkpoint') {
+            $this->reject(ExecutionStateRejectionReason::InputQuestionConflict, 'The Elwin resume context does not reference a Logres Turn checkpoint.');
+        }
+        foreach ($this->needsInputPauses as $pause) {
+            if (! $pause->handoff->equals($handoff->reference())) {
+                continue;
+            }
+            if ($pause->status === NeedsInputPauseStatus::Waiting && $pause->matches($handoff) && $pause->attemptId->value === $attemptId->value) {
+                $attempt = $this->findAttempt($attemptId);
+                if ($attempt->leases !== []) {
+                    if ($token === null) {
+                        $this->reject(ExecutionStateRejectionReason::ForeignLease, 'Replaying a pause requires its original Lease token.');
+                    }
+                    $this->assertAttemptToken($attempt, $token);
+                }
+                return $this;
+            }
+            $this->reject(ExecutionStateRejectionReason::InputQuestionConflict, 'An Elwin handoff identity cannot be reused or changed.');
+        }
+        if ($this->waitingInputPause() !== null) {
+            $this->reject(ExecutionStateRejectionReason::InputAlreadyPending, 'The Run already has an outstanding Elwin handoff.');
+        }
+        if (! in_array($this->status, [RunStatus::Preparing, RunStatus::Running], true)) {
+            $this->reject(ExecutionStateRejectionReason::InvalidTransition, 'Human input can only pause a preparing or running Run.');
+        }
+
+        $attempt = $this->requireCurrentAttempt($attemptId);
+        $leases = $attempt->leases;
+        if ($lease = $attempt->activeLease()) {
+            if ($token === null || ! hash_equals($lease->token->value, $token->value)) {
+                $this->reject(ExecutionStateRejectionReason::ForeignLease, 'Pausing an active Attempt requires its Lease token.');
+            }
+            $released = $lease->release($lease->holder, $lease->token, 'handoff:'.$handoff->id, $handoff->requestedAt);
+            $leases = array_map(static fn (ExecutionLease $item): ExecutionLease => $item->id->value === $released->id->value ? $released : $item, $leases);
+        }
+        if (! in_array($attempt->status, [AttemptStatus::Ready, AttemptStatus::Leased, AttemptStatus::Running], true)) {
+            $this->reject(ExecutionStateRejectionReason::InvalidTransition, 'The current Attempt cannot pause for human input.');
+        }
+
+        RunTransitionPolicy::assertAllowed($this->status, RunStatus::NeedsInput);
+        $waiting = new ExecutionAttempt($attempt->id, $attempt->runId, $attempt->number, AttemptStatus::NeedsInput, $attempt->createdAt, $attempt->previousAttemptId, $leases, $attempt->startedAt);
+
+        return $this->replaceAttempt($waiting)->copy(
+            status: RunStatus::NeedsInput,
+            needsInputPauses: [...$this->needsInputPauses, NeedsInputPause::fromHandoff($handoff, $attemptId)],
+        );
+    }
+
+    public function resumeFromInput(ResumableHandoff $handoff, string $operationId, HumanInputAuthorization $authorization, DateTimeImmutable $now): self
+    {
+        if (! $authorization->allowed) {
+            $this->reject(ExecutionStateRejectionReason::InputResponseUnauthorized, $authorization->reason);
+        }
+        foreach ($this->needsInputPauses as $pause) {
+            if ($pause->resolutionOperationId !== $operationId) {
+                continue;
+            }
+            if ($pause->status === NeedsInputPauseStatus::Resumed && $pause->matches($handoff)) {
+                return $this;
+            }
+            $this->reject(ExecutionStateRejectionReason::InputQuestionConflict, 'A resume operation identity cannot be reused with different evidence.');
+        }
+
+        $pause = $this->requireWaitingInputPause($handoff);
+        if (! $handoff->isResumableAt($now)) {
+            $this->reject(ExecutionStateRejectionReason::InputNotResumable, 'Elwin has not accepted a resumable response for this handoff.');
+        }
+        $attempt = $this->requireCurrentAttempt($pause->attemptId);
+        if ($attempt->status !== AttemptStatus::NeedsInput || $this->status !== RunStatus::NeedsInput) {
+            $this->reject(ExecutionStateRejectionReason::InputNotPending, 'The Run is not paused at this handoff.');
+        }
+
+        RunTransitionPolicy::assertAllowed($this->status, RunStatus::Preparing);
+        $ready = new ExecutionAttempt($attempt->id, $attempt->runId, $attempt->number, AttemptStatus::Ready, $attempt->createdAt, $attempt->previousAttemptId, $attempt->leases, $attempt->startedAt);
+
+        return $this->replaceAttempt($ready)
+            ->replaceNeedsInputPause($pause->resolve(NeedsInputPauseStatus::Resumed, $operationId, $now))
+            ->copy(status: RunStatus::Preparing);
+    }
+
+    public function timeoutInput(ResumableHandoff $handoff, string $operationId, DateTimeImmutable $now): self
+    {
+        foreach ($this->needsInputPauses as $pause) {
+            if ($pause->resolutionOperationId === $operationId) {
+                if ($pause->status === NeedsInputPauseStatus::TimedOut && $pause->matches($handoff)) {
+                    return $this;
+                }
+                $this->reject(ExecutionStateRejectionReason::InputQuestionConflict, 'A timeout operation identity cannot be reused with different evidence.');
+            }
+        }
+        $pause = $this->requireWaitingInputPause($handoff);
+        if ($handoff->status !== HandoffStatus::Expired || $handoff->expiredAt === null || $now < $handoff->expiredAt) {
+            $this->reject(ExecutionStateRejectionReason::InputNotResumable, 'Logres can time out only from an Elwin handoff with observed expiry.');
+        }
+        $attempt = $this->requireCurrentAttempt($pause->attemptId);
+        RunTransitionPolicy::assertAllowed($this->status, RunStatus::TimedOut);
+        $timedOut = new ExecutionAttempt($attempt->id, $attempt->runId, $attempt->number, AttemptStatus::TimedOut, $attempt->createdAt, $attempt->previousAttemptId, $attempt->leases, $attempt->startedAt, $now, 'human input timed out');
+
+        return $this->replaceAttempt($timedOut)
+            ->replaceNeedsInputPause($pause->resolve(NeedsInputPauseStatus::TimedOut, $operationId, $now))
+            ->copy(status: RunStatus::TimedOut, finishedAt: $now, activeAttemptId: null, failureReason: 'human input timed out');
     }
 
     public function renewLease(AttemptId $attemptId, ExecutionNodeRef $holder, LeaseToken $token, string $renewalId, DateTimeImmutable $now, int $ttlSeconds): self
@@ -256,7 +378,7 @@ final readonly class ExecutionState
         }
         $intent = new CancellationIntent($operationId, $kind, $requestedBy, $reason, CancellationStatus::Requested, $now);
 
-        if ($this->status === RunStatus::Pending || $this->activeAttemptId === null || ($this->status === RunStatus::Preparing && $this->startedAt === null)) {
+        if ($this->status === RunStatus::Pending || $this->status === RunStatus::NeedsInput || $this->activeAttemptId === null || ($this->status === RunStatus::Preparing && $this->startedAt === null)) {
             return $this->cancelBeforeDispatch($intent, $now);
         }
 
@@ -382,8 +504,41 @@ final readonly class ExecutionState
             $replacement = new ExecutionAttempt($attempt->id, $attempt->runId, $attempt->number, $attemptStatus, $attempt->createdAt, $attempt->previousAttemptId, $leases, $attempt->startedAt, $now, $intent->reason);
             $attempts = array_map(static fn (ExecutionAttempt $item): ExecutionAttempt => $item->id->value === $replacement->id->value ? $replacement : $item, $attempts);
         }
+        $pauses = $this->needsInputPauses;
+        if ($pause = $this->waitingInputPause()) {
+            $closed = $pause->resolve(NeedsInputPauseStatus::Cancelled, $intent->operationId, $now);
+            $pauses = array_map(static fn (NeedsInputPause $item): NeedsInputPause => $item->handoff->equals($closed->handoff) ? $closed : $item, $pauses);
+        }
         RunTransitionPolicy::assertAllowed($this->status, $runStatus);
-        return $this->copy(status: $runStatus, finishedAt: $now, activeAttemptId: null, attempts: $attempts, failureReason: $intent->reason, cancellation: $intent->confirm($now, null));
+        return $this->copy(status: $runStatus, finishedAt: $now, activeAttemptId: null, attempts: $attempts, failureReason: $intent->reason, cancellation: $intent->confirm($now, null), needsInputPauses: $pauses);
+    }
+
+    private function waitingInputPause(): ?NeedsInputPause
+    {
+        foreach (array_reverse($this->needsInputPauses) as $pause) {
+            if ($pause->status === NeedsInputPauseStatus::Waiting) {
+                return $pause;
+            }
+        }
+        return null;
+    }
+
+    private function requireWaitingInputPause(ResumableHandoff $handoff): NeedsInputPause
+    {
+        $pause = $this->waitingInputPause();
+        if ($pause === null || ! $pause->matches($handoff)) {
+            return $this->reject(ExecutionStateRejectionReason::InputNotPending, 'The Run is not waiting for this Elwin handoff.');
+        }
+        return $pause;
+    }
+
+    private function replaceNeedsInputPause(NeedsInputPause $replacement): self
+    {
+        $pauses = array_map(
+            static fn (NeedsInputPause $pause): NeedsInputPause => $pause->handoff->equals($replacement->handoff) ? $replacement : $pause,
+            $this->needsInputPauses,
+        );
+        return $this->copy(needsInputPauses: $pauses);
     }
 
     private function requireAuthorizedActiveLease(ExecutionAttempt $attempt, LeaseToken $token, DateTimeImmutable $now): ExecutionLease
@@ -427,9 +582,9 @@ final readonly class ExecutionState
     }
 
     /** @param list<ExecutionAttempt>|null $attempts */
-    private function copy(?RunStatus $status = null, ?DateTimeImmutable $scheduledAt = null, ?DateTimeImmutable $startedAt = null, ?DateTimeImmutable $finishedAt = null, AttemptId|false|null $activeAttemptId = false, ?array $attempts = null, ?string $failureReason = null, ?string $terminalResultReference = null, ?ExecutionStateDetails $details = null, ?RecoveryRecord $recovery = null, ?CancellationIntent $cancellation = null): self
+    private function copy(?RunStatus $status = null, ?DateTimeImmutable $scheduledAt = null, ?DateTimeImmutable $startedAt = null, ?DateTimeImmutable $finishedAt = null, AttemptId|false|null $activeAttemptId = false, ?array $attempts = null, ?string $failureReason = null, ?string $terminalResultReference = null, ?ExecutionStateDetails $details = null, ?RecoveryRecord $recovery = null, ?CancellationIntent $cancellation = null, ?array $needsInputPauses = null): self
     {
-        return new self($this->runId, $status ?? $this->status, $this->createdAt, $scheduledAt ?? $this->scheduledAt, $startedAt ?? $this->startedAt, $finishedAt ?? $this->finishedAt, $activeAttemptId === false ? $this->activeAttemptId : $activeAttemptId, $attempts ?? $this->attempts, $failureReason ?? $this->failureReason, $terminalResultReference ?? $this->terminalResultReference, $this->version + 1, $details ?? $this->details, $recovery ?? $this->recovery, $cancellation ?? $this->cancellation);
+        return new self($this->runId, $status ?? $this->status, $this->createdAt, $scheduledAt ?? $this->scheduledAt, $startedAt ?? $this->startedAt, $finishedAt ?? $this->finishedAt, $activeAttemptId === false ? $this->activeAttemptId : $activeAttemptId, $attempts ?? $this->attempts, $failureReason ?? $this->failureReason, $terminalResultReference ?? $this->terminalResultReference, $this->version + 1, $details ?? $this->details, $recovery ?? $this->recovery, $cancellation ?? $this->cancellation, $needsInputPauses ?? $this->needsInputPauses);
     }
 
     /** @return never */

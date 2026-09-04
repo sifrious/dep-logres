@@ -43,6 +43,8 @@ Logres is the authority for mutable current execution state. `ExecutionState` se
 
 Retry/recovery and cancellation are durable parts of the same aggregate. Failures are classified as transient, permanent, or acknowledgement-uncertain; retry policy produces an explicit retry, reconcile, or fail action. Authorized manual cancellation and timeout create idempotent intent, prevent new lease authority, preserve partial evidence, and remain distinct terminal outcomes.
 
+Human gates consume Elwin's clarification-acceptance and resumable-handoff contracts. Logres persists only the Elwin handoff reference, opaque resume context, Attempt identity, and pause/resolution lifecycle; it never copies clarification prompts, response shapes, responses, or handoff payloads into execution state. A durable Turn checkpoint prevents completed preflight and before-turn handlers from replaying after an accepted handoff resumes.
+
 The composed package proof and its application-level boundary are documented in [docs/remote-execution-conformance.md](docs/remote-execution-conformance.md).
 
 ## Dispatch authorization

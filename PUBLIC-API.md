@@ -141,6 +141,9 @@ The package is pre-release. These names define the current consumer surface; sem
 - `CancellationIntent`
 - `CancellationKind`
 - `CancellationStatus`
+- `NeedsInputPause`
+- `NeedsInputPauseStatus`
+- `HumanInputAuthorization`
 - `RunResult`
 - `RunResultStore`
 - `RunResultHistorian`
@@ -158,6 +161,8 @@ The package is pre-release. These names define the current consumer surface; sem
 - `PostflightReport`
 - `PostflightResultAssembler`
 - `TurnRunner`
+- `TurnCheckpoint`
+- `TurnCheckpointStore`
 
 ## Runner boundary
 
