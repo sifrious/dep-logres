@@ -103,7 +103,7 @@ final readonly class ExecutionRunner
 
         $finishedAt = $now;
         $resultIdentity = $envelope->stacksContext;
-        if ($resultIdentity !== null && $runtimeResult->resultingRevision !== null && $runtimeResult->diffIdentity !== null) {
+        if ($runtimeResult->resultingRevision !== null && $runtimeResult->diffIdentity !== null) {
             $resultIdentity = $resultIdentity->withResult($runtimeResult->resultingRevision, $runtimeResult->diffIdentity);
         }
         $terminal = new RunnerTerminalResult(
