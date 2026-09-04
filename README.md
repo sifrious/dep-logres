@@ -45,6 +45,14 @@ Retry/recovery and cancellation are durable parts of the same aggregate. Failure
 
 The composed package proof and its application-level boundary are documented in [docs/remote-execution-conformance.md](docs/remote-execution-conformance.md).
 
+## Cross-package phase delivery
+
+The revision-pinned ownership map for planning, dispatch, execution, evidence, review, and
+post-merge observation is documented in
+[docs/phase-delivery-loop.md](docs/phase-delivery-loop.md). Its machine-readable fixture names
+the owner, contracts, persistence, authorization, idempotency, evidence, and gap for every
+transition so application consumers do not recreate package lifecycles.
+
 ## Dispatch authorization
 
 Logres requires an explicit, current grant before a Run can enter dispatch. The policy matches canonical repository identity, workspace authority and normalized contained path, selected target, environment, runtime, frozen prompt permissions, actor, grant validity, and target-observation freshness. An allowed decision freezes the approved context on the Run. Capabilities describe what a target can do; only a grant describes what it may do.
