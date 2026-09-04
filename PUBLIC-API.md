@@ -128,6 +128,14 @@ The package is pre-release. These names define the current consumer surface; sem
 - `ExecutionAttempt`
 - `AttemptId`
 - `AttemptStatus`
+- `DelegationId`
+- `OrbisAgentDefinition`
+- `DelegationContext`
+- `DelegationAuthorization`
+- `DelegationRequest`
+- `DelegateRun`
+- `DelegationStore`
+- `DelegationReadModel`
 - `ExecutionLease`
 - `LeaseId`
 - `LeaseToken`
