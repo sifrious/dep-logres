@@ -39,6 +39,8 @@ final readonly class TaskPlanReadModel
                     'readiness' => $plan->readiness($task->id)->value,
                     'actions' => array_map(static fn (TaskAction $action): string => $action->value, $plan->availableActions($task->id)),
                     'user_actions' => array_map(static fn (TaskAction $action): string => $action->value, $plan->userActions($task->id)),
+                    'execution_identity' => $task->executionIdentity?->toArray()
+                        ?? ExecutionProvenanceClassification::missingRecord(),
                 ],
                 $plan->tasks,
             ),

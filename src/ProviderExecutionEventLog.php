@@ -79,7 +79,7 @@ final readonly class ProviderExecutionEventLog
             && $this->runId->value === $envelope->runId->value
             && $this->taskId->value === $envelope->taskId->value
             && $this->attemptId->value === $envelope->attemptId->value
-            && $this->executionIdentity?->canonicalIdentity() === $envelope->executionIdentity?->canonicalIdentity();
+            && $this->executionIdentity?->dispatchEvidenceFingerprint() === $envelope->executionIdentity?->dispatchEvidenceFingerprint();
     }
 
     public function projectedRunStatus(): RunStatus

@@ -32,6 +32,10 @@ final class ExecutionRecordTest extends TestCase
             'occurred_at' => '2026-08-27T12:34:56+00:00',
             'payload' => ['chunk' => "one\ntwo"],
             'provenance' => ['harness_id' => 'fixture'],
+            'execution_identity' => [
+                'classification' => 'legacy_missing',
+                'workspace_id' => null,
+            ],
         ], $event->toArray());
     }
 

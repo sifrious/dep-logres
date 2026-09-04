@@ -5,10 +5,19 @@ declare(strict_types=1);
 namespace Sifrious\Logres\Tests;
 
 use InvalidArgumentException;
+use DateTimeImmutable;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Sifrious\Logres\ExecutionIdentityResolver;
+use Sifrious\Logres\AttemptId;
 use Sifrious\Logres\ExecutionProvenanceClassification;
+use Sifrious\Logres\LeaseId;
+use Sifrious\Logres\RunId;
+use Sifrious\Logres\RunResult;
+use Sifrious\Logres\RunnerIdentity;
+use Sifrious\Logres\RunnerTerminalResult;
+use Sifrious\Logres\RunnerTerminalStatus;
+use Sifrious\Logres\WorkspaceAuthority;
 use Sifrious\Logres\StacksExecutionContext;
 use Sifrious\Logres\StacksWorkspaceResolver;
 use Sifrious\Logres\Tests\Fixtures\RunIdentityFixtures;
@@ -94,6 +103,32 @@ final class ExecutionProvenanceIdentityTest extends TestCase
         self::assertSame(ExecutionProvenanceClassification::LegacyStacksV1, $partial->classification());
         self::assertFalse($partial->isDispatchable());
         self::assertNull(StacksExecutionContext::fromArray(ExecutionProvenanceClassification::missingRecord()));
+    }
+
+    #[Test]
+    public function wardrobe_result_revision_survives_terminal_result_ingestion(): void
+    {
+        $completed = $this->identity('ws_one', '/tmp/worktree-a', 'checkout:one')
+            ->withResult(str_repeat('b', 40), 'diff:sha256:'.str_repeat('d', 64));
+        $terminal = new RunnerTerminalResult(
+            new RunId('run:one'),
+            new AttemptId('attempt:one'),
+            new LeaseId('lease:one'),
+            new RunnerIdentity('runner:one'),
+            RunnerTerminalStatus::Success,
+            'agent',
+            'wardrobe:test',
+            new WorkspaceAuthority('ws_one'),
+            new DateTimeImmutable('2026-09-04T13:00:00Z'),
+            new DateTimeImmutable('2026-09-04T13:01:00Z'),
+            0,
+            executionIdentity: $completed,
+        );
+
+        $result = RunResult::fromRunnerTerminal($terminal);
+
+        self::assertSame($completed->toArray(), $result->executionIdentity?->toArray());
+        self::assertSame('diff:sha256:'.str_repeat('d', 64), $result->executionIdentity?->diffIdentity);
     }
 
     private function resolver(array $matches): ExecutionIdentityResolver

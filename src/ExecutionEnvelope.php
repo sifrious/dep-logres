@@ -49,6 +49,8 @@ final readonly class ExecutionEnvelope
             $workspaceIdentity->value !== $stacksContext->workspace->workspaceId
             || $workspacePath->value !== $stacksContext->provenance->executionPath
             || $repositoryIdentity->value !== $stacksContext->workspace->repositoryId
+            || ! $stacksContext->isDispatchable()
+            || $stacksContext->resultingRevision !== null
         )) {
             throw new InvalidArgumentException('Legacy execution fields must match the canonical Stacks context during migration.');
         }

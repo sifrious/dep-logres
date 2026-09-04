@@ -40,9 +40,14 @@ final readonly class ExecutionState
         }
     }
 
-    public static function create(RunId $runId, DateTimeImmutable $createdAt, ?ExecutionStateDetails $details = null, ?StacksExecutionContext $executionIdentity = null): self
+    public static function create(RunId $runId, DateTimeImmutable $createdAt, StacksExecutionContext $executionIdentity, ?ExecutionStateDetails $details = null): self
     {
         return new self($runId, RunStatus::Pending, $createdAt, details: $details, executionIdentity: $executionIdentity);
+    }
+
+    public static function restoreLegacy(RunId $runId, DateTimeImmutable $createdAt, ?ExecutionStateDetails $details = null): self
+    {
+        return new self($runId, RunStatus::Pending, $createdAt, details: $details);
     }
 
     public function scheduleAttempt(AttemptId $attemptId, DateTimeImmutable $now): self

@@ -99,14 +99,23 @@ final readonly class ExecutionRunner
         }
 
         $finishedAt = $now;
+        $resultIdentity = $envelope->stacksContext;
+        if ($resultIdentity !== null && $runtimeResult->resultingRevision !== null && $runtimeResult->diffIdentity !== null) {
+            $resultIdentity = $resultIdentity->withResult($runtimeResult->resultingRevision, $runtimeResult->diffIdentity);
+        }
         $terminal = new RunnerTerminalResult(
             $envelope->runId, $envelope->attemptId, $envelope->leaseId, $this->runner->identity,
             $runtimeResult->status, $envelope->runtime, $envelope->runtimeAdapter, $envelope->workspaceIdentity,
             $now, $finishedAt, $runtimeResult->exitCode, failureCategory: $runtimeResult->failureCategory, failureDetail: $runtimeResult->failureDetail,
-            executionIdentity: $envelope->stacksContext,
+            executionIdentity: $resultIdentity,
         );
         $this->localState->save(new RunnerLocalRecord($key, $envelope->idempotencyIdentity, $fingerprint, RunnerLocalStage::Reporting, $finishedAt, $terminal));
-        $observer->event(RunnerEventType::TerminalResult, ['status' => $terminal->status->value, 'exit_code' => $terminal->exitCode]);
+        $observer->event(RunnerEventType::TerminalResult, [
+            'status' => $terminal->status->value,
+            'exit_code' => $terminal->exitCode,
+            'resulting_revision' => $runtimeResult->resultingRevision,
+            'diff_identity' => $runtimeResult->diffIdentity,
+        ]);
 
         return RunnerExecutionOutcome::completed($terminal);
     }

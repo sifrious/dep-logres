@@ -49,7 +49,7 @@ final readonly class RunnerTerminalReconciler
         if ($record->terminalResult->runId->value !== $receipt->result->runId->value
             || $record->terminalResult->attemptId->value !== $receipt->result->attemptId->value
             || $record->terminalResult->leaseId->value !== $receipt->result->leaseId->value
-            || $record->terminalResult->executionIdentity?->canonicalIdentity() !== $receipt->result->executionIdentity?->canonicalIdentity()) {
+            || $record->terminalResult->executionIdentity?->toArray() !== $receipt->result->executionIdentity?->toArray()) {
             return;
         }
 

@@ -77,6 +77,25 @@ final readonly class RunResult
         return new self(RunStatus::ProviderError, stderr: $stderr, reason: $reason);
     }
 
+    public static function fromRunnerTerminal(RunnerTerminalResult $terminal): self
+    {
+        $status = match ($terminal->status) {
+            RunnerTerminalStatus::Success => RunStatus::Succeeded,
+            RunnerTerminalStatus::Failure => RunStatus::Failed,
+            RunnerTerminalStatus::Cancelled => RunStatus::Cancelled,
+            RunnerTerminalStatus::TimedOut => RunStatus::TimedOut,
+            RunnerTerminalStatus::Rejected => RunStatus::ProviderError,
+        };
+
+        return new self(
+            status: $status,
+            stderr: $terminal->failureDetail ?? '',
+            exitCode: $terminal->exitCode,
+            reason: $terminal->failureCategory,
+            executionIdentity: $terminal->executionIdentity,
+        );
+    }
+
     public function withRequiredVerification(RequiredVerificationOutcome $outcome): self
     {
         $status = $this->status;

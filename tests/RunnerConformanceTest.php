@@ -43,6 +43,7 @@ use Sifrious\Logres\WorkspaceAuthority;
 use Sifrious\Logres\WorkspacePath;
 use Sifrious\Logres\RepositoryIdentity;
 use Sifrious\Logres\Tests\Fixtures\InMemoryExecutionStateStore;
+use Sifrious\Logres\Tests\Fixtures\RunIdentityFixtures;
 
 final class RunnerConformanceTest extends TestCase
 {
@@ -176,7 +177,7 @@ final class RunnerConformanceTest extends TestCase
     #[Test]
     public function runner_consumes_canonical_logres_attempt_and_lease_authority(): void
     {
-        $state = ExecutionState::create(new RunId('run:test'), $this->now())
+        $state = ExecutionState::create(new RunId('run:test'), $this->now(), RunIdentityFixtures::executionIdentity())
             ->scheduleAttempt(new AttemptId('attempt:test'), $this->now())
             ->acquireLease(new AttemptId('attempt:test'), new LeaseId('lease:test'), new ExecutionNodeRef('runner:test'), new LeaseToken('lease-secret'), 'dispatch:test', $this->now(), 60);
         $store = new InMemoryExecutionStateStore();

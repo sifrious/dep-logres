@@ -54,7 +54,7 @@ final class RemoteExecutionLifecycleConformanceTest extends TestCase
         self::assertNotNull($authorizedRun->dispatchAuthorization);
         $attemptId = new AttemptId('attempt:authorized:1');
         $token = new LeaseToken('token:authorized');
-        $state = ExecutionState::create($authorizedRun->id, $this->at(0))
+        $state = ExecutionState::create($authorizedRun->id, $this->at(0), RunIdentityFixtures::executionIdentity())
             ->scheduleAttempt($attemptId, $this->at(0))
             ->acquireLease($attemptId, new LeaseId('lease:authorized'), new ExecutionNodeRef('node:authorized'), $token, 'acquire:authorized', $this->at(1), 60)
             ->start($attemptId, $token, $this->at(2));
@@ -136,7 +136,7 @@ final class RemoteExecutionLifecycleConformanceTest extends TestCase
 
     private function ready(string $attemptId, int $seconds): ExecutionState
     {
-        return ExecutionState::create(new RunId('run:conformance'), $this->at($seconds))->scheduleAttempt(new AttemptId($attemptId), $this->at($seconds));
+        return ExecutionState::create(new RunId('run:conformance'), $this->at($seconds), RunIdentityFixtures::executionIdentity())->scheduleAttempt(new AttemptId($attemptId), $this->at($seconds));
     }
 
     private function at(int $seconds): DateTimeImmutable
