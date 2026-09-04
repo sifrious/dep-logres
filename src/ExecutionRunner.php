@@ -106,7 +106,6 @@ final readonly class ExecutionRunner
         );
         $this->localState->save(new RunnerLocalRecord($key, $envelope->idempotencyIdentity, $fingerprint, RunnerLocalStage::Reporting, $finishedAt, $terminal));
         $observer->event(RunnerEventType::TerminalResult, ['status' => $terminal->status->value, 'exit_code' => $terminal->exitCode]);
-        $this->localState->save(new RunnerLocalRecord($key, $envelope->idempotencyIdentity, $fingerprint, RunnerLocalStage::Terminal, $finishedAt, $terminal));
 
         return RunnerExecutionOutcome::completed($terminal);
     }

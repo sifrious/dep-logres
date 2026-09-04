@@ -33,6 +33,14 @@ Expected failures return `RunnerRejectionReason`; rejected work never invokes th
 
 `RunnerTerminalResultSink` and `RunnerTerminalReconciler` define network-loss recovery after local execution reaches a terminal result. When local state is `reporting`, reconciliation replays the retained terminal result; accepted/duplicate receipts converge local state to `terminal` without re-invoking Wardrobe.
 
+## Outbound runner loop
+
+`OutboundRunnerLoop` performs one transport-neutral cycle: poll, return bounded backoff when no work is available, acknowledge an offered lease, invoke `ExecutionRunner` only after an acknowledged or duplicate acknowledgement, and report any terminal result. Rejected or conflicting acknowledgements fail the cycle before runtime invocation. A retry receipt leaves the durable local record in `reporting`, where `RunnerTerminalReconciler` can redeliver it without invoking the runtime again.
+
+Acknowledgement identities use `runner-ack:sha256:<hex>`, where `<hex>` is SHA-256 over the UTF-8 Run ID, Attempt ID, and Lease ID values in that order, separated by NUL bytes. Replaying one offered lease therefore produces the same acknowledgement identity.
+
+The loop depends only on package contracts. HTTP authentication, long-poll request construction, endpoint URLs, serialization, and other transport adapters belong to the host application.
+
 ## Events and terminal outcomes
 
 Every `RunnerEvent` contains stable Run, Attempt, Lease, Runner, event, sequence, and timestamp identities. Its deterministic event ID permits safe redelivery. The normalized vocabulary includes acceptance, start/running/status, output, questions/intervention, artifacts, warnings/failures, and one typed terminal result.
