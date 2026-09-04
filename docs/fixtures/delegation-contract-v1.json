@@ -11,8 +11,12 @@
       "child_run_id": "run:child-a",
       "child_request_id": "request:child-a",
       "agent": {
-        "id": "agent:researcher",
-        "version": "orbis-agent:v3",
+        "contract": "sifrious.cross-package-reference",
+        "contract_version": 1,
+        "owner": "sifrious/orbis",
+        "type": "agent-definition",
+        "id": "researcher",
+        "object_version": "v3",
         "content_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
       },
       "bounded_context": {
@@ -43,8 +47,12 @@
       "child_run_id": "run:child-b",
       "child_request_id": "request:child-b",
       "agent": {
-        "id": "agent:reviewer",
-        "version": "orbis-agent:v5",
+        "contract": "sifrious.cross-package-reference",
+        "contract_version": 1,
+        "owner": "sifrious/orbis",
+        "type": "agent-definition",
+        "id": "reviewer",
+        "object_version": "v5",
         "content_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
       },
       "bounded_context": {

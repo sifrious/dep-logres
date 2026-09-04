@@ -8,6 +8,7 @@ use DateTimeImmutable;
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Sifrious\Logres\AgentDefinitionRef;
 use Sifrious\Logres\AttemptId;
 use Sifrious\Logres\DelegationAuthorization;
 use Sifrious\Logres\DelegationContext;
@@ -19,12 +20,12 @@ use Sifrious\Logres\ExecutionRequestId;
 use Sifrious\Logres\ExecutionState;
 use Sifrious\Logres\ExecutionTargetId;
 use Sifrious\Logres\InputRequestReference;
-use Sifrious\Logres\OrbisAgentDefinition;
 use Sifrious\Logres\RepositoryIdentity;
 use Sifrious\Logres\RunId;
 use Sifrious\Logres\RunStatus;
 use Sifrious\Logres\WorkspaceAuthority;
 use Sifrious\Logres\WorkspacePath;
+use Sifrious\ReferenceContract\CrossPackageReference;
 
 final class DelegationContractTest extends TestCase
 {
@@ -133,7 +134,10 @@ final class DelegationContractTest extends TestCase
             new AttemptId('attempt:parent:4'),
             new RunId('run:child'),
             new ExecutionRequestId('request:child'),
-            new OrbisAgentDefinition('agent:contract-reviewer', 'orbis-agent:v3', str_repeat('a', 64)),
+            new AgentDefinitionRef(
+                new CrossPackageReference('sifrious/orbis', 'agent-definition', 'contract-reviewer', 'v3'),
+                str_repeat('a', 64),
+            ),
             DelegationContext::boundedBy(
                 $this->parentAuthorization(),
                 new WorkspacePath('/workspace/packages/logres'),

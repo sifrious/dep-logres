@@ -18,7 +18,7 @@ final readonly class DelegationRequest
         public AttemptId $parentAttemptId,
         public RunId $childRunId,
         public ExecutionRequestId $childRequestId,
-        public OrbisAgentDefinition $agent,
+        public AgentDefinitionRef $agent,
         public DelegationContext $context,
         public DelegationAuthorization $authorization,
         public string $requestedAt,

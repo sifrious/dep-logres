@@ -129,7 +129,7 @@ The package is pre-release. These names define the current consumer surface; sem
 - `AttemptId`
 - `AttemptStatus`
 - `DelegationId`
-- `OrbisAgentDefinition`
+- `AgentDefinitionRef`
 - `DelegationContext`
 - `DelegationAuthorization`
 - `DelegationRequest`

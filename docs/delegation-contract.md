@@ -13,6 +13,11 @@ through the canonical Logres execution state and attempt machinery. An agent
 definition never calls another agent definition directly, and this package
 does not add a nested execution loop.
 
+`AgentDefinitionRef` identifies the Orbis definition through the shared
+`CrossPackageReference` contract (`sifrious/orbis`, `agent-definition`) and
+freezes its object version and content hash. Logres does not parse or own Orbis
+agent manifests.
+
 The host implementation must atomically persist:
 
 1. the `DelegationRequest`;
