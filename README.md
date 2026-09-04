@@ -43,6 +43,8 @@ Logres is the authority for mutable current execution state. `ExecutionState` se
 
 Retry/recovery and cancellation are durable parts of the same aggregate. Failures are classified as transient, permanent, or acknowledgement-uncertain; retry policy produces an explicit retry, reconcile, or fail action. Authorized manual cancellation and timeout create idempotent intent, prevent new lease authority, preserve partial evidence, and remain distinct terminal outcomes.
 
+Orchestration consumers provide a persisted, versioned `LoopPolicy` rather than embedding limits in their loop. `LoopPolicyEvaluator` produces explicit continue, bounded human-wait, verified-completion, cancellation, authorization-revocation, unresolved-input, and policy-exhaustion determinations with remaining budgets and controlling clauses. See [docs/loop-policy.md](docs/loop-policy.md).
+
 The composed package proof and its application-level boundary are documented in [docs/remote-execution-conformance.md](docs/remote-execution-conformance.md).
 
 ## Dispatch authorization
