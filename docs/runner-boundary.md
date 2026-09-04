@@ -25,6 +25,14 @@ The boundary deliberately contains no HTTP, queue, UI, framework, provider-SDK, 
 
 Expected failures return `RunnerRejectionReason`; rejected work never invokes the runtime. Accepted work becomes a `RuntimeRequest` through `RunnerRuntime`. A Burdgeon runner process binds that port to Wardrobe. Logres neither imports provider SDKs nor branches on Codex, Claude, Amp, or any other provider.
 
+## Outbound poll, lease acknowledgement, and terminal reconciliation
+
+`RunnerPollRequest`/`RunnerPollResponse` and `RunnerWorkPoller` define the outbound work-fetch contract. A poll returns either one offered bounded lease (`lease`) with its immutable `ExecutionEnvelope`, or explicit `no_work` with a positive retry delay.
+
+`RunnerLeaseAcknowledgement`, `RunnerLeaseAcknowledger`, and `RunnerLeaseAcknowledgementResult` define idempotent lease acknowledgement. Hosts replay the same acknowledgement identity safely and reject identity reuse for different lease authority.
+
+`RunnerTerminalResultSink` and `RunnerTerminalReconciler` define network-loss recovery after local execution reaches a terminal result. When local state is `reporting`, reconciliation replays the retained terminal result; accepted/duplicate receipts converge local state to `terminal` without re-invoking Wardrobe.
+
 ## Events and terminal outcomes
 
 Every `RunnerEvent` contains stable Run, Attempt, Lease, Runner, event, sequence, and timestamp identities. Its deterministic event ID permits safe redelivery. The normalized vocabulary includes acceptance, start/running/status, output, questions/intervention, artifacts, warnings/failures, and one typed terminal result.
