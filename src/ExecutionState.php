@@ -127,6 +127,13 @@ final readonly class ExecutionState
                 continue;
             }
             if ($input->isOutstanding() && $input->question == $question) {
+                $attempt = $this->findAttempt($question->attemptId);
+                if ($attempt->leases !== []) {
+                    if ($token === null) {
+                        $this->reject(ExecutionStateRejectionReason::ForeignLease, 'Replaying a human-input request requires its original Lease token.');
+                    }
+                    $this->assertAttemptToken($attempt, $token);
+                }
                 return $this;
             }
             $this->reject(ExecutionStateRejectionReason::InputQuestionConflict, 'A human-input question identity cannot be reused or changed.');
@@ -162,8 +169,20 @@ final readonly class ExecutionState
 
     public function recordInputDelivery(string $questionId, string $deliveryId, string $channel, DateTimeImmutable $deliveredAt): self
     {
-        $input = $this->requireOutstandingInput($questionId);
+        $input = null;
+        foreach ($this->humanInputs as $candidate) {
+            if ($candidate->question->id === $questionId) {
+                $input = $candidate;
+                break;
+            }
+        }
+        if ($input === null) {
+            $this->reject(ExecutionStateRejectionReason::InputNotPending, 'The human-input question does not exist.');
+        }
         $delivered = $input->deliver($deliveryId, $channel, $deliveredAt);
+        if (! $input->isOutstanding() && $delivered !== $input) {
+            $this->reject(ExecutionStateRejectionReason::InputNotPending, 'A resolved human-input question cannot receive a new delivery.');
+        }
 
         return $delivered === $input ? $this : $this->replaceHumanInput($delivered);
     }
@@ -208,7 +227,10 @@ final readonly class ExecutionState
         foreach ($this->humanInputs as $input) {
             foreach ($input->events as $event) {
                 if ($event->operationId === $operationId && $event->type === HumanInputResolution::TimedOut->value) {
-                    return $this;
+                    if ($input->question->id === $questionId) {
+                        return $this;
+                    }
+                    $this->reject(ExecutionStateRejectionReason::InputQuestionConflict, 'A timeout identity cannot be reused for another question.');
                 }
             }
         }

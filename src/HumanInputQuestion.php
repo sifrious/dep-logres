@@ -25,7 +25,7 @@ final readonly class HumanInputQuestion
 
         $invalid = array_filter(
             $this->allowedResponses,
-            static fn (mixed $response): bool => ! is_string($response) || trim($response) === '',
+            static fn (string $response): bool => trim($response) === '',
         );
         if ($this->allowedResponses === [] || $invalid !== [] || $this->allowedResponses !== array_values(array_unique($this->allowedResponses))) {
             throw new InvalidArgumentException('A human-input question requires distinct non-empty string responses.');

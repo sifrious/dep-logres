@@ -50,7 +50,13 @@ final readonly class HumanInputRecord
                 throw ExecutionStateRejected::because(ExecutionStateRejectionReason::InputQuestionConflict, 'A delivery identity cannot be reused with different evidence.');
             }
         }
-        return new self($this->question, [...$this->events, new HumanInputEvent($deliveryId, 'delivered', $deliveredAt, channel: $channel)]);
+        return new self(
+            $this->question,
+            [...$this->events, new HumanInputEvent($deliveryId, 'delivered', $deliveredAt, channel: $channel)],
+            $this->response,
+            $this->resolution,
+            $this->resolvedAt,
+        );
     }
 
     public function answer(HumanInputResponse $response): self

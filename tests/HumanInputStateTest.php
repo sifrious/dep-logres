@@ -57,6 +57,10 @@ final class HumanInputStateTest extends TestCase
     {
         $paused = $this->running()->requestInput($this->question(), new LeaseToken('secret:1'));
         self::assertEquals($paused, $paused->requestInput($this->question(), new LeaseToken('secret:1')));
+        $this->assertRejected(
+            ExecutionStateRejectionReason::ForeignLease,
+            fn () => $paused->requestInput($this->question(), new LeaseToken('foreign')),
+        );
 
         $this->assertRejected(
             ExecutionStateRejectionReason::InputQuestionConflict,
@@ -90,6 +94,14 @@ final class HumanInputStateTest extends TestCase
         self::assertNull($resumed->currentAttempt()->previousAttemptId);
         self::assertSame('step:verify', $resumed->humanInputs[0]->question->stepId);
         self::assertEquals($resumed, $resumed->respondToInput($response, HumanInputAuthorization::allow()));
+
+        $deliveredBeforeAnswer = $paused->recordInputDelivery('question:1', 'delivery:1', 'browser', $this->at(4));
+        $answeredAfterDelivery = $deliveredBeforeAnswer->respondToInput($response, HumanInputAuthorization::allow());
+        self::assertEquals($answeredAfterDelivery, $answeredAfterDelivery->recordInputDelivery('question:1', 'delivery:1', 'browser', $this->at(5)));
+        $this->assertRejected(
+            ExecutionStateRejectionReason::InputNotPending,
+            fn () => $answeredAfterDelivery->recordInputDelivery('question:1', 'delivery:late', 'browser', $this->at(5)),
+        );
     }
 
     #[Test]
