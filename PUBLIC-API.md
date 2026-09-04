@@ -137,6 +137,17 @@ The package is pre-release. These names define the current consumer surface; sem
 - `RecoveryAction`
 - `RecoveryRecord`
 - `RetryPolicy`
+- `AgentStepId`
+- `AgentStepAction`
+- `AgentStepDetermination`
+- `AgentStepObservation`
+- `AgentStepRecord`
+- `AgentStepStore`
+- `AgentStepDeterminer`
+- `AgentStepEffect`
+- `AgentStepReentry`
+- `AgentStepLoop`
+- `AgentStepCycleResult`
 - `LoopPolicy`
 - `LoopPolicyEvaluator`
 - `LoopPolicyDetermination`
