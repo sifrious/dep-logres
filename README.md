@@ -49,7 +49,7 @@ The composed package proof and its application-level boundary are documented in 
 
 ## Delegation contract
 
-Logres defines one agent-to-agent delegation boundary that creates a child Run from an immutable Orbis agent definition and authority bounded by the parent. The child uses canonical execution attempts; delegation adds inspectable parent-child provenance and no nested execution loop. The contract proposal and fixture are documented in [docs/delegation-contract.md](docs/delegation-contract.md); runtime, policy, and resumable NeedsInput wiring are merge-gated on MME-1007, MME-1010, and MME-1299.
+Logres defines one agent-to-agent delegation boundary that creates a child Run from an immutable Orbis agent definition and authority bounded by the parent. The child uses canonical execution attempts; delegation adds inspectable parent-child provenance and no nested execution loop. The contract proposal and fixture are documented in [docs/delegation-contract.md](docs/delegation-contract.md); MME-1010 loop-policy primitives are present, while step-runtime and resumable NeedsInput wiring remain merge-gated on MME-1007 and MME-1299.
 
 ## Dispatch authorization
 

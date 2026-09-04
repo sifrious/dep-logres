@@ -49,7 +49,7 @@
         "Version-one workspace containment is defined for normalized absolute POSIX paths.",
         "Dispatch policy cannot discover repository remotes, authenticate actors, load grants, or invoke providers.",
         "Delegation contracts cannot execute a nested agent loop or replace canonical Run and ExecutionAttempt state.",
-        "Delegation runtime and policy evaluation remain merge-gated on MME-1007 and MME-1010; resumable NeedsInput wiring remains merge-gated on MME-1299."
+        "Delegation consumes the MME-1010 loop-policy primitives; atomic step-runtime integration remains merge-gated on MME-1007 and resumable NeedsInput wiring remains merge-gated on MME-1299."
     ],
     "open_questions": [
         {"id": "Q-001", "question": "Which later ticket introduces attachment media metadata beyond a stable reference and display name?"},
@@ -83,7 +83,7 @@
         {"id": "MME-8", "name": "Explicit execution target selection", "stage": "MVP", "status": "package_implemented_host_integration_pending"},
         {"id": "MME-1553", "name": "Stable Run identity and provider acknowledgement", "stage": "MVP", "status": "package_implemented_host_integration_pending"},
         {"id": "MME-1557", "name": "Target, repository, and workspace safety", "stage": "MVP", "status": "package_implemented_host_integration_pending"},
-        {"id": "MME-1012", "name": "Agent-to-agent delegation", "stage": "Stage 3", "status": "contract_fixture_proposed_merge_after_mme_1007_1010"}
+        {"id": "MME-1012", "name": "Agent-to-agent delegation", "stage": "Stage 3", "status": "contract_fixture_proposed_policy_available_merge_after_mme_1007_1299"}
     ],
     "workflows": [
         {"id": "W-001", "name": "Submit execution request", "states": ["mapped", "validated", "rejected_or_persisting", "accepted_or_persistence_failed"]},

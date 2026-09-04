@@ -1,8 +1,9 @@
 # Agent-to-agent delegation contract
 
-Status: contract proposal and deterministic fixture only. Merge the runtime
-adapter after MME-1007 and the policy evaluator after MME-1010. NeedsInput
-storage/resume wiring follows MME-1299.
+Status: contract proposal and deterministic fixture only. MME-1010 policy
+primitives are available on main. Bind their determinations to the delegation
+operation with the MME-1007 runtime adapter. NeedsInput storage/resume wiring
+follows MME-1299.
 
 ## Boundary
 
@@ -39,11 +40,12 @@ parent path, and child permissions must be a non-empty subset. A child receives
 its own current dispatch grant before dispatch; parent authority is only an
 upper bound and is not itself reusable as child authority.
 
-`DelegationAuthorization` freezes the allowed decision from MME-1010,
-including policy version, resulting depth, active-child count, and finite depth
-and concurrency limits. It intentionally does not evaluate policy. The final
-MME-1010 integration must provide that evaluator and account for the child
-creation in the same atomic determination.
+`DelegationAuthorization` freezes the allowed decision produced from the
+MME-1010 `LoopPolicy` and `LoopPolicyDetermination`, including policy version,
+resulting depth, active-child count, and finite depth and concurrency limits.
+It intentionally does not reevaluate policy. The MME-1007 integration must
+persist the applicable determination and account for child creation in the
+same atomic step transition.
 
 ## Observation and propagation
 
