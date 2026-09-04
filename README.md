@@ -43,6 +43,8 @@ Logres is the authority for mutable current execution state. `ExecutionState` se
 
 Retry/recovery and cancellation are durable parts of the same aggregate. Failures are classified as transient, permanent, or acknowledgement-uncertain; retry policy produces an explicit retry, reconcile, or fail action. Authorized manual cancellation and timeout create idempotent intent, prevent new lease authority, preserve partial evidence, and remain distinct terminal outcomes.
 
+Human gates are durable parts of the aggregate as well. One stable question at a time releases runner lease authority, survives repeated delivery and disconnected clients, accepts only an authorized response matching its declared shape, and resumes the same step and Attempt lineage. Timeout and cancellation close the question distinctly while retaining its complete audit history.
+
 The composed package proof and its application-level boundary are documented in [docs/remote-execution-conformance.md](docs/remote-execution-conformance.md).
 
 ## Dispatch authorization

@@ -21,6 +21,7 @@ final readonly class ExecutionStateReadModel
         public ?array $details,
         public ?array $recovery,
         public ?array $cancellation,
+        public array $humanInputs,
     ) {}
 
     public static function fromState(ExecutionState $state): self
@@ -79,6 +80,30 @@ final readonly class ExecutionStateReadModel
                 'confirmed_at' => $state->cancellation->confirmedAt?->format(DATE_ATOM),
                 'partial_result_reference' => $state->cancellation->partialResultReference,
             ],
+            array_map(static fn (HumanInputRecord $input): array => [
+                'question_id' => $input->question->id,
+                'attempt_id' => $input->question->attemptId->value,
+                'step_id' => $input->question->stepId,
+                'prompt' => $input->question->prompt,
+                'response_shape' => $input->question->responseShape(),
+                'requested_at' => $input->question->requestedAt->format(DATE_ATOM),
+                'expires_at' => $input->question->expiresAt?->format(DATE_ATOM),
+                'resolution' => $input->resolution?->value,
+                'resolved_at' => $input->resolvedAt?->format(DATE_ATOM),
+                'response' => $input->response === null ? null : [
+                    'id' => $input->response->id,
+                    'responder_id' => $input->response->responderId,
+                    'value' => $input->response->value,
+                    'responded_at' => $input->response->respondedAt->format(DATE_ATOM),
+                ],
+                'audit' => array_map(static fn (HumanInputEvent $event): array => [
+                    'operation_id' => $event->operationId,
+                    'type' => $event->type,
+                    'occurred_at' => $event->occurredAt->format(DATE_ATOM),
+                    'actor_id' => $event->actorId,
+                    'channel' => $event->channel,
+                ], $input->events),
+            ], $state->humanInputs),
         );
     }
 

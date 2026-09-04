@@ -21,4 +21,11 @@ enum ExecutionStateRejectionReason: string
     case CancellationUnauthorized = 'cancellation_unauthorized';
     case CancellationPending = 'cancellation_pending';
     case CancellationConflict = 'cancellation_conflict';
+    case InputAlreadyPending = 'input_already_pending';
+    case InputQuestionConflict = 'input_question_conflict';
+    case InputNotPending = 'input_not_pending';
+    case InputResponseInvalid = 'input_response_invalid';
+    case InputResponseUnauthorized = 'input_response_unauthorized';
+    case InputExpired = 'input_expired';
+    case InputNotExpired = 'input_not_expired';
 }
