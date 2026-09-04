@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Sifrious\Logres;
 
-enum VerificationStatus: string
+enum CheckDisposition: string
 {
-    case Succeeded = 'succeeded';
+    case Passed = 'passed';
     case Failed = 'failed';
     case Incomplete = 'incomplete';
     case SkippedByPolicy = 'skipped_by_policy';
