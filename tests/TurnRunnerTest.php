@@ -36,6 +36,7 @@ use Sifrious\Logres\RequiredVerificationOutcome;
 use Sifrious\Logres\RunRequest;
 use Sifrious\Logres\RunResult;
 use Sifrious\Logres\RunId;
+use Sifrious\Logres\RunStatus;
 use Sifrious\Logres\NeedsInput;
 use Sifrious\Logres\Turn;
 use Sifrious\Logres\TurnContext;

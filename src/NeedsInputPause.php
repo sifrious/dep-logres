@@ -37,7 +37,11 @@ final readonly class NeedsInputPause
 
     public function matches(ResumableHandoff $handoff): bool
     {
-        return $this->handoff->equals($handoff->reference())
+        $candidate = $handoff->reference();
+
+        return $this->handoff->owner === $candidate->owner
+            && $this->handoff->type === $candidate->type
+            && $this->handoff->id === $candidate->id
             && $this->resumeContext == $handoff->resumeContext;
     }
 

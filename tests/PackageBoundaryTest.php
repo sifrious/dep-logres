@@ -23,6 +23,8 @@ final class PackageBoundaryTest extends TestCase
             'sifrious/authorization-contract' => 'dev-main',
             'sifrious/reference-contract' => '^1.0',
             'sifrious/stacks-contract' => '^1.0',
+            'sifrious/elwin' => 'dev-cursor/resumable-handoffs-b1d5#9667abdef4ea97e532ea557b36fa944b2572732b',
+            'sifrious/elwin-clarification-contract' => 'dev-pr-9',
         ], $manifest['require']);
     }
 

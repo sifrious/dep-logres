@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "8c22b4ef30ecb698876a3f4d805fb4a4",
+    "content-hash": "64af340ae2ee35a432e42d40300abf30",
     "packages": [
         {
             "name": "quain/core",
@@ -2318,12 +2318,11 @@
         }
     ],
     "aliases": [],
-    "minimum-stability": "stable",
+    "minimum-stability": "dev",
     "stability-flags": {
         "sifrious/authorization-contract": 20,
         "sifrious/elwin": 20,
-        "sifrious/elwin-clarification-contract": 20,
-        "quain/core": 20
+        "sifrious/elwin-clarification-contract": 20
     },
     "prefer-stable": true,
     "prefer-lowest": false,

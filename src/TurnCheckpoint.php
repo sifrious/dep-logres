@@ -43,11 +43,15 @@ final readonly class TurnCheckpoint
 
     public function matches(RunRequest $request, ResumableHandoff $handoff): bool
     {
+        $candidate = $handoff->reference();
+
         return hash_equals($this->requestIdentity, $request->identity())
             && $handoff->pausedWork->owner === 'sifrious/logres'
             && $handoff->pausedWork->type === 'run'
             && hash_equals($this->requestIdentity, $handoff->pausedWork->id)
-            && $this->handoff->equals($handoff->reference())
+            && $this->handoff->owner === $candidate->owner
+            && $this->handoff->type === $candidate->type
+            && $this->handoff->id === $candidate->id
             && $this->resumeContext == $handoff->resumeContext;
     }
 }
