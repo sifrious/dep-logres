@@ -382,6 +382,7 @@ final class ProviderInvocationCoordinatorTest extends TestCase
             inputResponse: ['callback' => '/input', 'correlation' => 'input:'.$suffix],
             timeoutSeconds: $prompt->input->request->constraints->timeoutSeconds,
             cancellationReference: "cancel:invocation-{$suffix}",
+            executionIdentity: $run->provenance->executionIdentity,
         );
     }
 

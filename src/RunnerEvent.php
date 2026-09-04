@@ -19,6 +19,7 @@ final readonly class RunnerEvent
         public DateTimeImmutable $occurredAt,
         public RunnerEventType $type,
         public array $payload = [],
+        public ?StacksExecutionContext $executionIdentity = null,
     ) {
         if (trim($id) === '' || $sequence < 1) {
             throw new InvalidArgumentException('Runner events require a stable identity and positive sequence.');

@@ -24,6 +24,7 @@ final readonly class RunResult
         public ?RequiredVerificationOutcome $requiredVerification = null,
         public VerificationStatus $verificationStatus = VerificationStatus::Incomplete,
         public FinalizationStatus $finalizationStatus = FinalizationStatus::Incomplete,
+        public ?StacksExecutionContext $executionIdentity = null,
     ) {
         if (! $this->status->isTerminal()) {
             throw new InvalidArgumentException('A run result requires a terminal status.');
@@ -101,6 +102,7 @@ final readonly class RunResult
             requiredVerification: $outcome,
             verificationStatus: $this->verificationStatus,
             finalizationStatus: $this->finalizationStatus,
+            executionIdentity: $this->executionIdentity,
         );
     }
 
@@ -126,6 +128,7 @@ final readonly class RunResult
             requiredVerification: $this->requiredVerification,
             verificationStatus: VerificationStatus::Incomplete,
             finalizationStatus: FinalizationStatus::Incomplete,
+            executionIdentity: $this->executionIdentity,
         );
     }
 }

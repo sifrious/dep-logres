@@ -15,6 +15,7 @@ final readonly class ExecutionEvent
         public DateTimeImmutable $occurredAt,
         public array $payload = [],
         public array $provenance = [],
+        public ?StacksExecutionContext $executionIdentity = null,
     ) {
         if ($this->sequence < 1) {
             throw new InvalidArgumentException('An execution event sequence starts at one.');
@@ -33,6 +34,8 @@ final readonly class ExecutionEvent
             'occurred_at' => $this->occurredAt->format(DATE_ATOM),
             'payload' => $this->payload,
             'provenance' => $this->provenance,
+            'execution_identity' => $this->executionIdentity?->toArray()
+                ?? ExecutionProvenanceClassification::missingRecord(),
         ];
     }
 }

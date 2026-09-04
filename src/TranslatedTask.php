@@ -25,6 +25,7 @@ final readonly class TranslatedTask
         public string $target,
         public string $agent,
         public TaskStatus $status = TaskStatus::Planned,
+        public ?StacksExecutionContext $executionIdentity = null,
     ) {
         $this->acceptanceEvidence = array_values($acceptanceEvidence);
         $this->dependencies = array_values($dependencies);
@@ -46,6 +47,7 @@ final readonly class TranslatedTask
             target: $this->target,
             agent: $this->agent,
             status: $status,
+            executionIdentity: $this->executionIdentity,
         );
     }
 }

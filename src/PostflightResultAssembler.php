@@ -18,6 +18,7 @@ final readonly class PostflightResultAssembler
             requiredVerification: $providerResult->requiredVerification,
             verificationStatus: $report->verificationStatus,
             finalizationStatus: FinalizationStatus::Complete,
+            executionIdentity: $providerResult->executionIdentity,
         );
     }
 }

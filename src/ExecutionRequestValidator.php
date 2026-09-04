@@ -20,6 +20,10 @@ final class ExecutionRequestValidator
 
         if ($this->blank($request->context->projectReference) && $this->blank($request->context->repositoryReference)) {
             $failures[] = new ExecutionRequestFailure('target_required', 'context', 'A project or repository reference is required.');
+        } elseif ($request->executionIdentity === null) {
+            $failures[] = new ExecutionRequestFailure('workspace_provenance_required', 'execution_identity', 'A canonical Stacks workspace and immutable revision provenance are required.');
+        } elseif (! $request->executionIdentity->isDispatchable()) {
+            $failures[] = new ExecutionRequestFailure('workspace_provenance_incomplete', 'execution_identity', 'Legacy or partial Stacks provenance cannot authorize a new execution.');
         }
 
         if ($request->constraints->timeoutSeconds < 1) {

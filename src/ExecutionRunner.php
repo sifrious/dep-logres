@@ -103,6 +103,7 @@ final readonly class ExecutionRunner
             $envelope->runId, $envelope->attemptId, $envelope->leaseId, $this->runner->identity,
             $runtimeResult->status, $envelope->runtime, $envelope->runtimeAdapter, $envelope->workspaceIdentity,
             $now, $finishedAt, $runtimeResult->exitCode, failureCategory: $runtimeResult->failureCategory, failureDetail: $runtimeResult->failureDetail,
+            executionIdentity: $envelope->stacksContext,
         );
         $this->localState->save(new RunnerLocalRecord($key, $envelope->idempotencyIdentity, $fingerprint, RunnerLocalStage::Reporting, $finishedAt, $terminal));
         $observer->event(RunnerEventType::TerminalResult, ['status' => $terminal->status->value, 'exit_code' => $terminal->exitCode]);
@@ -116,6 +117,7 @@ final readonly class ExecutionRunner
             $envelope->runId, $envelope->attemptId, $envelope->leaseId, $this->runner->identity,
             RunnerTerminalStatus::Rejected, $envelope->runtime, $envelope->runtimeAdapter, $envelope->workspaceIdentity,
             $now, $now, failureCategory: $reason->value, failureDetail: $detail,
+            executionIdentity: $envelope->stacksContext,
         );
         return RunnerExecutionOutcome::rejected($reason, $detail, $terminal);
     }

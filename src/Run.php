@@ -40,6 +40,19 @@ final readonly class Run
         return new self($this->id, $this->provenance, ProviderBindingStatus::AwaitingAcknowledgement, dispatchedAt: $dispatchedAt, dispatchAuthorization: $this->dispatchAuthorization);
     }
 
+    public function revalidateForDispatch(StacksExecutionContext $currentObservation): self
+    {
+        if ($this->dispatchAuthorization === null || $this->provenance->executionIdentity === null) {
+            throw new InvalidArgumentException('Dispatch revalidation requires approved immutable Stacks provenance.');
+        }
+        $this->provenance->executionIdentity->assertSameDispatchEvidence($currentObservation);
+        if (! hash_equals($this->dispatchAuthorization->executionIdentityFingerprint, $currentObservation->dispatchEvidenceFingerprint())) {
+            throw new InvalidArgumentException('Revision evidence changed between approval and dispatch.');
+        }
+
+        return $this;
+    }
+
     public function validationBlocked(string $code, string $message, string $failedAt): self
     {
         if ($this->providerBindingStatus !== ProviderBindingStatus::NotDispatched || $this->dispatchAuthorization !== null) {
@@ -67,6 +80,8 @@ final readonly class Run
             || $snapshot->targetId->value !== $target->id->value
             || $snapshot->repositoryIdentity->value !== $target->repositoryIdentity
             || $snapshot->workspaceAuthority->value !== $target->workspaceAuthority
+            || $this->provenance->executionIdentity === null
+            || ! hash_equals($snapshot->executionIdentityFingerprint, $this->provenance->executionIdentity->dispatchEvidenceFingerprint())
             || $snapshot->environment !== $target->environment
             || $snapshot->runtime !== $target->runtime
             || array_diff($this->provenance->requestedPermissions, $snapshot->permissions) !== []) {
@@ -147,6 +162,8 @@ final readonly class Run
             && $snapshot->targetId->value === $target->id->value
             && $snapshot->repositoryIdentity->value === $target->repositoryIdentity
             && $snapshot->workspaceAuthority->value === $target->workspaceAuthority
+            && $this->provenance->executionIdentity !== null
+            && hash_equals($snapshot->executionIdentityFingerprint, $this->provenance->executionIdentity->dispatchEvidenceFingerprint())
             && $snapshot->environment === $target->environment
             && $snapshot->runtime === $target->runtime
             && array_diff($this->provenance->requestedPermissions, $snapshot->permissions) === [];

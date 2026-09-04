@@ -22,6 +22,7 @@ final readonly class ExecutionLease
         public ?DateTimeImmutable $releasedAt = null,
         public ?string $lastRenewalId = null,
         public ?string $releaseId = null,
+        public ?StacksExecutionContext $executionIdentity = null,
     ) {
         if (trim($acquisitionId) === '' || $expiresAt <= $acquiredAt) {
             throw new InvalidArgumentException('A Lease requires an acquisition identity and future expiry.');
@@ -44,7 +45,7 @@ final readonly class ExecutionLease
             throw new InvalidArgumentException('Renewal identity and positive TTL are required.');
         }
 
-        return new self($this->id, $this->attemptId, $this->holder, $this->token, $this->acquisitionId, LeaseStatus::Active, $this->acquiredAt, $now->modify("+{$ttlSeconds} seconds"), $now, lastRenewalId: $renewalId);
+        return new self($this->id, $this->attemptId, $this->holder, $this->token, $this->acquisitionId, LeaseStatus::Active, $this->acquiredAt, $now->modify("+{$ttlSeconds} seconds"), $now, lastRenewalId: $renewalId, executionIdentity: $this->executionIdentity);
     }
 
     public function release(ExecutionNodeRef $holder, LeaseToken $token, string $releaseId, DateTimeImmutable $now): self
@@ -60,7 +61,7 @@ final readonly class ExecutionLease
             throw new InvalidArgumentException('A release identity is required.');
         }
 
-        return new self($this->id, $this->attemptId, $this->holder, $this->token, $this->acquisitionId, LeaseStatus::Released, $this->acquiredAt, $this->expiresAt, $this->renewedAt, $now, $this->lastRenewalId, $releaseId);
+        return new self($this->id, $this->attemptId, $this->holder, $this->token, $this->acquisitionId, LeaseStatus::Released, $this->acquiredAt, $this->expiresAt, $this->renewedAt, $now, $this->lastRenewalId, $releaseId, $this->executionIdentity);
     }
 
     public function expire(DateTimeImmutable $now): self
@@ -72,7 +73,7 @@ final readonly class ExecutionLease
             throw ExecutionStateRejected::because(ExecutionStateRejectionReason::InvalidTransition, 'Only an elapsed active Lease can expire.');
         }
 
-        return new self($this->id, $this->attemptId, $this->holder, $this->token, $this->acquisitionId, LeaseStatus::Expired, $this->acquiredAt, $this->expiresAt, $this->renewedAt, lastRenewalId: $this->lastRenewalId);
+        return new self($this->id, $this->attemptId, $this->holder, $this->token, $this->acquisitionId, LeaseStatus::Expired, $this->acquiredAt, $this->expiresAt, $this->renewedAt, lastRenewalId: $this->lastRenewalId, executionIdentity: $this->executionIdentity);
     }
 
     public function isActiveAt(DateTimeImmutable $now): bool

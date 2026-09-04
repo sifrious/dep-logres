@@ -19,6 +19,7 @@ final readonly class RunnerLease
         public DateTimeImmutable $expiresAt,
         public ?DateTimeImmutable $acknowledgedAt = null,
         public ?DateTimeImmutable $completedAt = null,
+        public ?StacksExecutionContext $executionIdentity = null,
     ) {
         if (trim($id) === '' || trim($runnerId) === '' || $expiresAt <= $leasedAt) {
             throw new InvalidArgumentException('A runner lease requires identities and a future expiry.');
@@ -34,7 +35,7 @@ final readonly class RunnerLease
             throw new InvalidArgumentException('A lease TTL must be positive.');
         }
 
-        return new self($id, $run->id, $run->dispatchAuthorization->targetId, $runnerId, RunnerLeaseStatus::Offered, $now, $now->modify("+{$ttlSeconds} seconds"));
+        return new self($id, $run->id, $run->dispatchAuthorization->targetId, $runnerId, RunnerLeaseStatus::Offered, $now, $now->modify("+{$ttlSeconds} seconds"), executionIdentity: $run->provenance->executionIdentity);
     }
 
     public function acknowledge(DateTimeImmutable $now): self
@@ -47,7 +48,7 @@ final readonly class RunnerLease
             throw new InvalidArgumentException('Only an offered lease can be acknowledged.');
         }
 
-        return new self($this->id, $this->runId, $this->targetId, $this->runnerId, RunnerLeaseStatus::Acknowledged, $this->leasedAt, $this->expiresAt, $now);
+        return new self($this->id, $this->runId, $this->targetId, $this->runnerId, RunnerLeaseStatus::Acknowledged, $this->leasedAt, $this->expiresAt, $now, executionIdentity: $this->executionIdentity);
     }
 
     public function complete(DateTimeImmutable $now): self
@@ -60,7 +61,7 @@ final readonly class RunnerLease
             throw new InvalidArgumentException('Only an acknowledged lease can complete.');
         }
 
-        return new self($this->id, $this->runId, $this->targetId, $this->runnerId, RunnerLeaseStatus::Completed, $this->leasedAt, $this->expiresAt, $this->acknowledgedAt, $now);
+        return new self($this->id, $this->runId, $this->targetId, $this->runnerId, RunnerLeaseStatus::Completed, $this->leasedAt, $this->expiresAt, $this->acknowledgedAt, $now, $this->executionIdentity);
     }
 
     public function reoffer(DateTimeImmutable $now, int $ttlSeconds): self
@@ -68,7 +69,7 @@ final readonly class RunnerLease
         if ($this->status !== RunnerLeaseStatus::Offered || $now < $this->expiresAt || $ttlSeconds < 1) {
             throw new InvalidArgumentException('Only an expired unacknowledged lease can be reoffered.');
         }
-        return new self($this->id, $this->runId, $this->targetId, $this->runnerId, RunnerLeaseStatus::Offered, $now, $now->modify("+{$ttlSeconds} seconds"));
+        return new self($this->id, $this->runId, $this->targetId, $this->runnerId, RunnerLeaseStatus::Offered, $now, $now->modify("+{$ttlSeconds} seconds"), executionIdentity: $this->executionIdentity);
     }
 
     public function heartbeat(DateTimeImmutable $now, int $ttlSeconds): self
@@ -77,7 +78,7 @@ final readonly class RunnerLease
         if ($this->status !== RunnerLeaseStatus::Acknowledged || $ttlSeconds < 1) {
             throw new InvalidArgumentException('Only an acknowledged lease can be renewed.');
         }
-        return new self($this->id, $this->runId, $this->targetId, $this->runnerId, $this->status, $this->leasedAt, $now->modify("+{$ttlSeconds} seconds"), $this->acknowledgedAt);
+        return new self($this->id, $this->runId, $this->targetId, $this->runnerId, $this->status, $this->leasedAt, $now->modify("+{$ttlSeconds} seconds"), $this->acknowledgedAt, executionIdentity: $this->executionIdentity);
     }
 
     public function recover(DateTimeImmutable $now, int $ttlSeconds): self
@@ -95,6 +96,7 @@ final readonly class RunnerLease
             $now,
             $now->modify("+{$ttlSeconds} seconds"),
             $this->acknowledgedAt,
+            executionIdentity: $this->executionIdentity,
         );
     }
 

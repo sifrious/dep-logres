@@ -33,6 +33,7 @@ final readonly class RunIdentityReadModel
         public ?string $identityIssue,
         public ?array $dispatchAuthorization,
         public ?array $preDispatchValidationFailure,
+        public array $executionIdentity,
     ) {}
 
     public static function fromRun(Run $run): self
@@ -81,6 +82,8 @@ final readonly class RunIdentityReadModel
                 'message' => $run->preDispatchValidationFailure->message,
                 'failed_at' => $run->preDispatchValidationFailure->failedAt,
             ],
+            executionIdentity: $provenance->executionIdentity?->toArray()
+                ?? ExecutionProvenanceClassification::missingRecord(),
         );
     }
 }

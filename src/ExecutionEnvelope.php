@@ -106,13 +106,17 @@ final readonly class ExecutionEnvelope
             'authentication_material' => $this->authenticationMaterial,
             'required_capabilities' => $this->requiredCapabilities,
             'request_payload' => $this->requestPayload,
-            'stacks_context' => $this->stacksContext?->toArray(),
+            'stacks_context' => $this->stacksContext?->toArray()
+                ?? ExecutionProvenanceClassification::missingRecord(),
         ];
     }
 
     private static function parseStacksContext(mixed $input): ?StacksExecutionContext
     {
         if ($input === null) {
+            return null;
+        }
+        if (is_array($input) && ($input['classification'] ?? null) === ExecutionProvenanceClassification::LegacyMissing->value) {
             return null;
         }
         if (! is_array($input)
@@ -151,6 +155,19 @@ final readonly class ExecutionEnvelope
                 $provenance['starting_revision'], $provenance['branch'], $provenance['repository_clone_url'],
                 $provenance['captured_at'], $provenance['metadata'] ?? [],
             ),
+            self::nullableString($input, 'revision_evidence', 'requested_base_revision'),
+            self::nullableString($input, 'revision_evidence', 'worktree_observation'),
+            is_string($input['capability_snapshot_version'] ?? null) ? $input['capability_snapshot_version'] : null,
+            is_string($input['selected_execution_target'] ?? null) ? $input['selected_execution_target'] : null,
+            self::nullableString($input, 'revision_evidence', 'resulting_revision'),
+            self::nullableString($input, 'revision_evidence', 'diff_identity'),
         );
+    }
+
+    private static function nullableString(array $input, string $group, string $field): ?string
+    {
+        $value = is_array($input[$group] ?? null) ? ($input[$group][$field] ?? null) : null;
+
+        return is_string($value) ? $value : null;
     }
 }

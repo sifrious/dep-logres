@@ -26,6 +26,7 @@ final readonly class RunnerTerminalResult
         public array $evidenceReferences = [],
         public ?string $failureCategory = null,
         public ?string $failureDetail = null,
+        public ?StacksExecutionContext $executionIdentity = null,
     ) {
         if ($finishedAt < $startedAt || ($status === RunnerTerminalStatus::Success && $exitCode !== 0)) {
             throw new InvalidArgumentException('A terminal runner result requires coherent timing and outcome data.');

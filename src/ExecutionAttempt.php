@@ -21,6 +21,7 @@ final readonly class ExecutionAttempt
         public ?DateTimeImmutable $startedAt = null,
         public ?DateTimeImmutable $finishedAt = null,
         public ?string $failureReason = null,
+        public ?StacksExecutionContext $executionIdentity = null,
     ) {
         if ($number < 1 || ($number === 1) === ($previousAttemptId !== null)) {
             throw new InvalidArgumentException('Attempt lineage must begin at one and every subsequent Attempt must name its predecessor.');
@@ -28,6 +29,11 @@ final readonly class ExecutionAttempt
         $active = array_filter($leases, static fn (ExecutionLease $lease): bool => $lease->status === LeaseStatus::Active);
         if (count($active) > 1) {
             throw new InvalidArgumentException('An Attempt cannot contain more than one active Lease.');
+        }
+        foreach ($leases as $lease) {
+            if ($executionIdentity !== null && $lease->executionIdentity?->canonicalIdentity() !== $executionIdentity->canonicalIdentity()) {
+                throw new InvalidArgumentException('Every Lease must preserve its Attempt execution identity.');
+            }
         }
     }
 

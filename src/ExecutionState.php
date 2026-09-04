@@ -25,6 +25,7 @@ final readonly class ExecutionState
         public ?ExecutionStateDetails $details = null,
         public ?RecoveryRecord $recovery = null,
         public ?CancellationIntent $cancellation = null,
+        public ?StacksExecutionContext $executionIdentity = null,
     ) {
         if ($version < 0) {
             throw new InvalidArgumentException('Execution-state version cannot be negative.');
@@ -39,9 +40,9 @@ final readonly class ExecutionState
         }
     }
 
-    public static function create(RunId $runId, DateTimeImmutable $createdAt, ?ExecutionStateDetails $details = null): self
+    public static function create(RunId $runId, DateTimeImmutable $createdAt, ?ExecutionStateDetails $details = null, ?StacksExecutionContext $executionIdentity = null): self
     {
-        return new self($runId, RunStatus::Pending, $createdAt, details: $details);
+        return new self($runId, RunStatus::Pending, $createdAt, details: $details, executionIdentity: $executionIdentity);
     }
 
     public function scheduleAttempt(AttemptId $attemptId, DateTimeImmutable $now): self
@@ -57,7 +58,7 @@ final readonly class ExecutionState
         }
 
         $previous = $this->attempts === [] ? null : $this->attempts[array_key_last($this->attempts)]->id;
-        $attempt = new ExecutionAttempt($attemptId, $this->runId, count($this->attempts) + 1, AttemptStatus::Ready, $now, $previous);
+        $attempt = new ExecutionAttempt($attemptId, $this->runId, count($this->attempts) + 1, AttemptStatus::Ready, $now, $previous, executionIdentity: $this->executionIdentity);
         $status = $this->status === RunStatus::Pending || $this->status === RunStatus::NeedsInput ? RunStatus::Preparing : $this->status;
         RunTransitionPolicy::assertAllowed($this->status, $status);
 
@@ -89,8 +90,8 @@ final readonly class ExecutionState
             throw new InvalidArgumentException('Acquisition identity and positive TTL are required.');
         }
 
-        $lease = new ExecutionLease($leaseId, $attemptId, $holder, $token, $acquisitionId, LeaseStatus::Active, $now, $now->modify("+{$ttlSeconds} seconds"));
-        $next = new ExecutionAttempt($attempt->id, $attempt->runId, $attempt->number, AttemptStatus::Leased, $attempt->createdAt, $attempt->previousAttemptId, [...$attempt->leases, $lease], $attempt->startedAt, $attempt->finishedAt, $attempt->failureReason);
+        $lease = new ExecutionLease($leaseId, $attemptId, $holder, $token, $acquisitionId, LeaseStatus::Active, $now, $now->modify("+{$ttlSeconds} seconds"), executionIdentity: $attempt->executionIdentity);
+        $next = new ExecutionAttempt($attempt->id, $attempt->runId, $attempt->number, AttemptStatus::Leased, $attempt->createdAt, $attempt->previousAttemptId, [...$attempt->leases, $lease], $attempt->startedAt, $attempt->finishedAt, $attempt->failureReason, $attempt->executionIdentity);
 
         return $this->replaceAttempt($next);
     }
@@ -106,7 +107,7 @@ final readonly class ExecutionState
             $this->reject(ExecutionStateRejectionReason::InvalidTransition, 'Only a leased Attempt can start.');
         }
         RunTransitionPolicy::assertAllowed($this->status, RunStatus::Running);
-        $next = new ExecutionAttempt($attempt->id, $attempt->runId, $attempt->number, AttemptStatus::Running, $attempt->createdAt, $attempt->previousAttemptId, $attempt->leases, $now);
+        $next = new ExecutionAttempt($attempt->id, $attempt->runId, $attempt->number, AttemptStatus::Running, $attempt->createdAt, $attempt->previousAttemptId, $attempt->leases, $now, executionIdentity: $attempt->executionIdentity);
 
         return $this->replaceAttempt($next)->copy(status: RunStatus::Running, startedAt: $this->startedAt ?? $now);
     }
@@ -156,7 +157,7 @@ final readonly class ExecutionState
         if ($attempt->status !== AttemptStatus::Expired || $this->status->isTerminal()) {
             $this->reject(ExecutionStateRejectionReason::NotEligibleForLease, 'Only an expired Attempt on a non-terminal Run can be followed by another Attempt.');
         }
-        $next = new ExecutionAttempt($nextAttemptId, $this->runId, $attempt->number + 1, AttemptStatus::Ready, $now, $attempt->id);
+        $next = new ExecutionAttempt($nextAttemptId, $this->runId, $attempt->number + 1, AttemptStatus::Ready, $now, $attempt->id, executionIdentity: $attempt->executionIdentity);
 
         return $this->copy(activeAttemptId: $nextAttemptId, attempts: [...$this->attempts, $next], scheduledAt: $now);
     }
@@ -183,7 +184,7 @@ final readonly class ExecutionState
 
         if ($classification === FailureClassification::AcknowledgementUncertain) {
             RunTransitionPolicy::assertAllowed($this->status, RunStatus::Reconciling);
-            $next = new ExecutionAttempt($attempt->id, $attempt->runId, $attempt->number, AttemptStatus::ReconciliationRequired, $attempt->createdAt, $attempt->previousAttemptId, $attempt->leases, $attempt->startedAt, failureReason: $reason);
+            $next = new ExecutionAttempt($attempt->id, $attempt->runId, $attempt->number, AttemptStatus::ReconciliationRequired, $attempt->createdAt, $attempt->previousAttemptId, $attempt->leases, $attempt->startedAt, failureReason: $reason, executionIdentity: $attempt->executionIdentity);
             return $this->replaceAttempt($next)->copy(status: RunStatus::Reconciling, recovery: $recovery);
         }
 
@@ -215,7 +216,7 @@ final readonly class ExecutionState
             $this->reject(ExecutionStateRejectionReason::InvalidTransition, 'An active Attempt prevents retry scheduling.');
         }
         $previous = $this->findAttempt($this->recovery->attemptId);
-        $next = new ExecutionAttempt($nextAttemptId, $this->runId, $previous->number + 1, AttemptStatus::Ready, $now, $previous->id);
+        $next = new ExecutionAttempt($nextAttemptId, $this->runId, $previous->number + 1, AttemptStatus::Ready, $now, $previous->id, executionIdentity: $previous->executionIdentity);
         RunTransitionPolicy::assertAllowed($this->status, RunStatus::Preparing);
         return $this->copy(status: RunStatus::Preparing, scheduledAt: $now, activeAttemptId: $nextAttemptId, attempts: [...$this->attempts, $next]);
     }
@@ -232,7 +233,7 @@ final readonly class ExecutionState
         }
         $attempt = $this->requireCurrentAttempt($attemptId);
         $this->requireAuthorizedActiveLease($attempt, $token, $now);
-        $next = new ExecutionAttempt($attempt->id, $attempt->runId, $attempt->number, AttemptStatus::Running, $attempt->createdAt, $attempt->previousAttemptId, $attempt->leases, $attempt->startedAt ?? $now);
+        $next = new ExecutionAttempt($attempt->id, $attempt->runId, $attempt->number, AttemptStatus::Running, $attempt->createdAt, $attempt->previousAttemptId, $attempt->leases, $attempt->startedAt ?? $now, executionIdentity: $attempt->executionIdentity);
         RunTransitionPolicy::assertAllowed($this->status, RunStatus::Running);
         return $this->replaceAttempt($next)->copy(status: RunStatus::Running, startedAt: $this->startedAt ?? $now);
     }
@@ -379,7 +380,7 @@ final readonly class ExecutionState
                 $leases = array_map(static fn (ExecutionLease $item): ExecutionLease => $item->id->value === $released->id->value ? $released : $item, $leases);
             }
             $attemptStatus = $intent->kind === CancellationKind::Timeout ? AttemptStatus::TimedOut : AttemptStatus::Cancelled;
-            $replacement = new ExecutionAttempt($attempt->id, $attempt->runId, $attempt->number, $attemptStatus, $attempt->createdAt, $attempt->previousAttemptId, $leases, $attempt->startedAt, $now, $intent->reason);
+            $replacement = new ExecutionAttempt($attempt->id, $attempt->runId, $attempt->number, $attemptStatus, $attempt->createdAt, $attempt->previousAttemptId, $leases, $attempt->startedAt, $now, $intent->reason, $attempt->executionIdentity);
             $attempts = array_map(static fn (ExecutionAttempt $item): ExecutionAttempt => $item->id->value === $replacement->id->value ? $replacement : $item, $attempts);
         }
         RunTransitionPolicy::assertAllowed($this->status, $runStatus);
@@ -411,13 +412,13 @@ final readonly class ExecutionState
     private function replaceLease(ExecutionAttempt $attempt, ExecutionLease $replacement, ?AttemptStatus $status = null): self
     {
         $leases = array_map(static fn (ExecutionLease $lease): ExecutionLease => $lease->id->value === $replacement->id->value ? $replacement : $lease, $attempt->leases);
-        return $this->replaceAttempt(new ExecutionAttempt($attempt->id, $attempt->runId, $attempt->number, $status ?? $attempt->status, $attempt->createdAt, $attempt->previousAttemptId, $leases, $attempt->startedAt, $attempt->finishedAt, $attempt->failureReason));
+        return $this->replaceAttempt(new ExecutionAttempt($attempt->id, $attempt->runId, $attempt->number, $status ?? $attempt->status, $attempt->createdAt, $attempt->previousAttemptId, $leases, $attempt->startedAt, $attempt->finishedAt, $attempt->failureReason, $attempt->executionIdentity));
     }
 
     private function replaceLeaseValue(ExecutionAttempt $attempt, ExecutionLease $replacement, AttemptStatus $status, DateTimeImmutable $finishedAt, ?string $reason): ExecutionAttempt
     {
         $leases = array_map(static fn (ExecutionLease $lease): ExecutionLease => $lease->id->value === $replacement->id->value ? $replacement : $lease, $attempt->leases);
-        return new ExecutionAttempt($attempt->id, $attempt->runId, $attempt->number, $status, $attempt->createdAt, $attempt->previousAttemptId, $leases, $attempt->startedAt, $finishedAt, $reason);
+        return new ExecutionAttempt($attempt->id, $attempt->runId, $attempt->number, $status, $attempt->createdAt, $attempt->previousAttemptId, $leases, $attempt->startedAt, $finishedAt, $reason, $attempt->executionIdentity);
     }
 
     private function replaceAttempt(ExecutionAttempt $replacement): self
@@ -429,7 +430,7 @@ final readonly class ExecutionState
     /** @param list<ExecutionAttempt>|null $attempts */
     private function copy(?RunStatus $status = null, ?DateTimeImmutable $scheduledAt = null, ?DateTimeImmutable $startedAt = null, ?DateTimeImmutable $finishedAt = null, AttemptId|false|null $activeAttemptId = false, ?array $attempts = null, ?string $failureReason = null, ?string $terminalResultReference = null, ?ExecutionStateDetails $details = null, ?RecoveryRecord $recovery = null, ?CancellationIntent $cancellation = null): self
     {
-        return new self($this->runId, $status ?? $this->status, $this->createdAt, $scheduledAt ?? $this->scheduledAt, $startedAt ?? $this->startedAt, $finishedAt ?? $this->finishedAt, $activeAttemptId === false ? $this->activeAttemptId : $activeAttemptId, $attempts ?? $this->attempts, $failureReason ?? $this->failureReason, $terminalResultReference ?? $this->terminalResultReference, $this->version + 1, $details ?? $this->details, $recovery ?? $this->recovery, $cancellation ?? $this->cancellation);
+        return new self($this->runId, $status ?? $this->status, $this->createdAt, $scheduledAt ?? $this->scheduledAt, $startedAt ?? $this->startedAt, $finishedAt ?? $this->finishedAt, $activeAttemptId === false ? $this->activeAttemptId : $activeAttemptId, $attempts ?? $this->attempts, $failureReason ?? $this->failureReason, $terminalResultReference ?? $this->terminalResultReference, $this->version + 1, $details ?? $this->details, $recovery ?? $this->recovery, $cancellation ?? $this->cancellation, $this->executionIdentity);
     }
 
     /** @return never */

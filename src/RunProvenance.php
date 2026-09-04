@@ -24,6 +24,7 @@ final readonly class RunProvenance
         array $policyVersions,
         public string $initiatingActor,
         public string $createdAt,
+        public ?StacksExecutionContext $executionIdentity = null,
     ) {
         if ($promptVersion < 1
             || $promptId->value !== "prompt:{$taskId->value}:v{$promptVersion}"
@@ -35,6 +36,13 @@ final readonly class RunProvenance
             || trim($initiatingActor) === ''
             || preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/', $createdAt) !== 1) {
             throw new InvalidArgumentException('Run provenance requires consistent request, task, prompt, target, policy, actor, and creation identities.');
+        }
+        if ($executionIdentity !== null && (
+            $executionIdentity->workspace->workspaceId !== $targetSelection->target->workspaceAuthority
+            || $executionIdentity->workspace->repositoryId !== $targetSelection->target->repositoryIdentity
+            || $executionIdentity->selectedExecutionTarget !== $targetSelection->target->id->value
+        )) {
+            throw new InvalidArgumentException('Run execution identity must match the selected Stacks workspace, repository, and execution target.');
         }
 
         ksort($policyVersions);
@@ -50,6 +58,7 @@ final readonly class RunProvenance
         array $policyVersions,
         string $initiatingActor,
         string $createdAt,
+        ?StacksExecutionContext $executionIdentity = null,
     ): self {
         return new self(
             requestId: $prompt->requestId,
@@ -63,6 +72,8 @@ final readonly class RunProvenance
             policyVersions: $policyVersions,
             initiatingActor: $initiatingActor,
             createdAt: $createdAt,
+            executionIdentity: $executionIdentity
+                ?? $prompt->input->request->executionIdentity,
         );
     }
 
