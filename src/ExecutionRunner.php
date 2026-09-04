@@ -51,6 +51,9 @@ final readonly class ExecutionRunner
         if (! $this->authorization->authorizes($envelope)) {
             return $this->reject($envelope, RunnerRejectionReason::Unauthorized, 'The authorization grant does not authorize this execution.', $now);
         }
+        if ($envelope->stacksContext === null || ! $envelope->stacksContext->isDispatchable()) {
+            return $this->reject($envelope, RunnerRejectionReason::WorkspaceProvenanceMissing, 'New execution cannot dispatch without complete canonical Stacks provenance.', $now);
+        }
         if (! $this->workspace->isAvailable($envelope->workspaceIdentity)) {
             return $this->reject($envelope, RunnerRejectionReason::WorkspaceUnavailable, 'The addressed workspace is unavailable on this runner.', $now);
         }

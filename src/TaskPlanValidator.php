@@ -31,6 +31,9 @@ final class TaskPlanValidator
             if ($task->requestId->value !== $plan->requestId->value) {
                 $failures[] = new TaskPlanFailure('request_mismatch', "tasks.{$index}.request_id", 'Every task must reference the plan request.');
             }
+            if ($task->executionIdentity === null || ! $task->executionIdentity->isDispatchable()) {
+                $failures[] = new TaskPlanFailure('workspace_provenance_required', "tasks.{$index}.execution_identity", 'Every new task requires complete canonical Stacks workspace provenance.');
+            }
 
             foreach ([['objective', $task->objective], ['expected_output', $task->expectedOutput], ['target', $task->target], ['agent', $task->agent]] as [$field, $value]) {
                 if (trim($value) === '') {

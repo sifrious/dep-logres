@@ -44,6 +44,7 @@ use Sifrious\Logres\WorkspacePath;
 use Sifrious\Logres\RepositoryIdentity;
 use Sifrious\Logres\Tests\Fixtures\InMemoryExecutionStateStore;
 use Sifrious\Logres\Tests\Fixtures\RunIdentityFixtures;
+use Sifrious\Logres\Tests\Fixtures\ExecutionRequestFixtures;
 
 final class RunnerConformanceTest extends TestCase
 {
@@ -96,8 +97,15 @@ final class RunnerConformanceTest extends TestCase
             RunnerRejectionReason::Unauthenticated->value => fn (array $e): array => array_replace($e, ['authentication_material' => 'bad']),
             RunnerRejectionReason::UnsupportedProtocolVersion->value => fn (array $e): array => array_replace($e, ['protocol_version' => '99']),
             RunnerRejectionReason::Unauthorized->value => fn (array $e): array => array_replace($e, ['authorization_grant_reference' => 'grant:denied']),
-            RunnerRejectionReason::WorkspaceUnavailable->value => fn (array $e): array => array_replace($e, ['workspace_identity' => 'workspace:missing']),
-            RunnerRejectionReason::WorkspaceMismatch->value => fn (array $e): array => array_replace($e, ['repository_identity' => 'repository:example.test/other']),
+            RunnerRejectionReason::WorkspaceProvenanceMissing->value => fn (array $e): array => array_diff_key($e, ['stacks_context' => true]),
+            RunnerRejectionReason::WorkspaceUnavailable->value => fn (array $e): array => array_replace($e, [
+                'workspace_identity' => 'workspace:missing',
+                'stacks_context' => ExecutionRequestFixtures::executionIdentity('workspace:missing', '/work/test', repositoryId: 'repository:example.test/repo', target: 'target:local:test')->toArray(),
+            ]),
+            RunnerRejectionReason::WorkspaceMismatch->value => fn (array $e): array => array_replace($e, [
+                'repository_identity' => 'repository:example.test/other',
+                'stacks_context' => ExecutionRequestFixtures::executionIdentity('workspace:test', '/work/test', repositoryId: 'repository:example.test/other', target: 'target:local:test')->toArray(),
+            ]),
             RunnerRejectionReason::RuntimeUnavailable->value => fn (array $e): array => array_replace($e, ['runtime_adapter' => 'missing']),
             RunnerRejectionReason::CapabilityMismatch->value => fn (array $e): array => array_replace($e, ['required_capabilities' => ['agent', 'gpu']]),
             RunnerRejectionReason::InvalidLifecycleState->value => fn (array $e): array => array_replace($e, ['lease_token' => 'invalid-lifecycle']),
@@ -283,6 +291,13 @@ final class RunnerConformanceTest extends TestCase
             'authorization_grant_reference' => 'grant:test', 'issued_at' => '2026-08-29T11:00:00Z', 'expires_at' => '2026-08-29T13:00:00Z',
             'protocol_version' => '1', 'idempotency_identity' => 'dispatch:test', 'authentication_material' => 'signed',
             'required_capabilities' => ['agent'], 'request_payload' => $this->planningPayload(),
+            'stacks_context' => ExecutionRequestFixtures::executionIdentity(
+                'workspace:test',
+                '/work/test',
+                repositoryId: 'repository:example.test/repo',
+                target: 'target:local:test',
+                checkoutId: 'checkout:test',
+            )->toArray(),
         ];
     }
 

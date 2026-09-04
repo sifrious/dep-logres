@@ -24,6 +24,15 @@ final readonly class Run
 
     public static function create(RunId $id, RunProvenance $provenance): self
     {
+        if ($provenance->executionIdentity === null || ! $provenance->executionIdentity->isDispatchable()) {
+            throw new InvalidArgumentException('Every new Run requires complete canonical Stacks workspace provenance.');
+        }
+
+        return new self($id, $provenance, ProviderBindingStatus::NotDispatched);
+    }
+
+    public static function restoreLegacy(RunId $id, RunProvenance $provenance): self
+    {
         return new self($id, $provenance, ProviderBindingStatus::NotDispatched);
     }
 

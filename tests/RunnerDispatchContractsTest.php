@@ -42,6 +42,7 @@ use Sifrious\Logres\RuntimeResult;
 use Sifrious\Logres\WorkspaceAuthority;
 use Sifrious\Logres\WorkspacePath;
 use Sifrious\Logres\Tests\Fixtures\InMemoryRunnerDispatchContracts;
+use Sifrious\Logres\Tests\Fixtures\ExecutionRequestFixtures;
 
 final class RunnerDispatchContractsTest extends TestCase
 {
@@ -148,7 +149,16 @@ final class RunnerDispatchContractsTest extends TestCase
         };
         $state = new InMemoryRunnerDispatchContracts();
         $runner = $this->runner($runtime, $state);
-        $escaped = array_replace($this->envelope(), ['workspace_path' => '/work/other/project']);
+        $escaped = array_replace($this->envelope(), [
+            'workspace_path' => '/work/other/project',
+            'stacks_context' => ExecutionRequestFixtures::executionIdentity(
+                'workspace:test',
+                '/work/other/project',
+                repositoryId: 'repository:example.test/repo',
+                target: 'target:local:test',
+                checkoutId: 'checkout:test',
+            )->toArray(),
+        ]);
 
         $outcome = $runner->execute($escaped, $this->now());
 
@@ -250,6 +260,13 @@ final class RunnerDispatchContractsTest extends TestCase
             'authentication_material' => 'signed',
             'required_capabilities' => ['agent'],
             'request_payload' => ['prompt' => 'ok'],
+            'stacks_context' => ExecutionRequestFixtures::executionIdentity(
+                'workspace:test',
+                '/work/test/project',
+                repositoryId: 'repository:example.test/repo',
+                target: 'target:local:test',
+                checkoutId: 'checkout:test',
+            )->toArray(),
         ];
     }
 

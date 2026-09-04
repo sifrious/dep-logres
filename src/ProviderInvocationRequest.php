@@ -44,7 +44,10 @@ final readonly class ProviderInvocationRequest
         if ($workspaceInstructions === [] || ! self::nonemptyStrings($workspaceInstructions) || $eventDelivery === [] || $inputResponse === []) {
             throw new InvalidArgumentException('A provider invocation requires workspace, event-delivery, and input-response instructions.');
         }
-        if ($executionIdentity !== null && $executionIdentity->selectedExecutionTarget !== $targetId->value) {
+        if ($executionIdentity === null || ! $executionIdentity->isDispatchable()) {
+            throw new InvalidArgumentException('Provider invocation requires complete canonical Stacks workspace provenance.');
+        }
+        if ($executionIdentity->selectedExecutionTarget !== $targetId->value) {
             throw new InvalidArgumentException('Provider invocation execution identity must name the selected target.');
         }
 

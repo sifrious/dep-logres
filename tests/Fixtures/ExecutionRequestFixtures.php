@@ -65,10 +65,13 @@ final class ExecutionRequestFixtures
         string $workspaceId = 'ws_00000000000000000000000000000001',
         string $path = '/workspace/atlas-api',
         string $revision = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+        string $repositoryId = 'repository:atlas-api',
+        string $target = 'target:orbs:orb-a',
+        ?string $checkoutId = null,
     ): StacksExecutionContext {
-        $repositoryId = 'repository:atlas-api';
+        $checkoutId ??= $workspaceId;
         $workspace = new WorkspaceReference(
-            $workspaceId,
+            $checkoutId,
             $repositoryId,
             'github.com/sifrious/atlas-api',
             $workspaceId,
@@ -82,7 +85,7 @@ final class ExecutionRequestFixtures
         return StacksExecutionContext::capture(
             $workspace,
             new ExecutionProvenance(
-                $workspaceId,
+                $checkoutId,
                 $repositoryId,
                 'github.com/sifrious/atlas-api',
                 $workspaceId,
@@ -94,9 +97,9 @@ final class ExecutionRequestFixtures
                 '2026-08-28T05:39:00+00:00',
             ),
             $revision,
-            'git-worktree:'.$workspaceId,
+            'git-worktree:'.$checkoutId,
             'capability-snapshot:'.str_repeat('c', 64),
-            'target:orbs:orb-a',
+            $target,
         );
     }
 }

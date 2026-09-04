@@ -14,6 +14,7 @@ enum RunnerRejectionReason: string
     case Unauthorized = 'unauthorized';
     case WorkspaceUnavailable = 'workspace_unavailable';
     case WorkspaceMismatch = 'workspace_mismatch';
+    case WorkspaceProvenanceMissing = 'workspace_provenance_missing';
     case RuntimeUnavailable = 'runtime_unavailable';
     case CapabilityMismatch = 'capability_mismatch';
     case DuplicateOrAlreadyProcessed = 'duplicate_or_already_processed';
