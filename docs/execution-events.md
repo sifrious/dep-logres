@@ -15,6 +15,9 @@ This package now models provider execution-event ingestion as a provider-neutral
 - Attach typed references for tool, command, file, test, artifact, and input events.
 - Provide presentation-neutral timeline projection (`ExecutionTimelineReadModel`).
 - Project Run disposition from normalized terminal events.
+- Feed normalized `test_completed`, `tool_completed`, and `command_executed` events into
+  package-owned verification aggregation (`VerificationOutcomeAggregator`) through
+  `VerificationPlan` + `CheckDefinition` matching and `EvidenceReference` capture.
 
 ## Normalized execution-event taxonomy
 

@@ -145,6 +145,12 @@ The package is pre-release. These names define the current consumer surface; sem
 - `RunResultStore`
 - `RunResultHistorian`
 - `RunResultReadModel`
+- `VerificationPlan`
+- `CheckDefinition`
+- `CheckDisposition`
+- `CheckResult`
+- `VerifiedOutcome`
+- `VerificationOutcomeAggregator`
 - `VerificationStatus`
 - `FinalizationStatus`
 - `RunEvidence`
@@ -207,6 +213,7 @@ Consumers depend on `HarnessInterface`. `AbstractHarness` is optional shared inv
 - `ExecutionEvent`
 - `ExecutionEventType`
 - `ExecutionEventReference`
+- `EvidenceReference`
 - `ArtifactReference`
 - `ToolInvocationReference`
 - `CommandExecutionReference`
