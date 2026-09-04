@@ -39,10 +39,5 @@ final readonly class LoopObservation
         if ($needsInputSince !== null && $needsInputSince > $observedAt) {
             throw new InvalidArgumentException('Input cannot have been requested after the observation.');
         }
-        foreach ($evidence as $reference) {
-            if (! $reference instanceof EvidenceReference) {
-                throw new InvalidArgumentException('Loop evidence must use canonical EvidenceReference values.');
-            }
-        }
     }
 }

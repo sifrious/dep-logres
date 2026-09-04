@@ -29,16 +29,6 @@ final readonly class LoopPolicyDetermination
         if ($outcome === LoopPolicyOutcome::PolicyExhausted && $exhaustedClauses === []) {
             throw new InvalidArgumentException('A policy-exhausted determination must name exhausted clauses.');
         }
-        foreach ($exhaustedClauses as $exhausted) {
-            if (! $exhausted instanceof LoopPolicyClause) {
-                throw new InvalidArgumentException('Exhaustion must use policy clauses.');
-            }
-        }
-        foreach ($evidence as $reference) {
-            if (! $reference instanceof EvidenceReference) {
-                throw new InvalidArgumentException('Determination evidence must use canonical EvidenceReference values.');
-            }
-        }
     }
 
     public function isTerminal(): bool
