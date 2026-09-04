@@ -61,6 +61,45 @@ final class ProviderExecutionEventFixtures
     }
 
     /** @return array<string, mixed> */
+    public static function artifactProduced(
+        string $id,
+        int $sequence,
+        string $artifactId,
+        string $type,
+        string $locator,
+        string $mediaType,
+        int $size,
+        string $integrity,
+        array $overrides = [],
+    ): array {
+        return self::base($id, $sequence, 'artifact.produced', array_merge([
+            'id' => $artifactId,
+            'type' => $type,
+            'locator' => $locator,
+            'media_type' => $mediaType,
+            'size' => $size,
+            'integrity' => $integrity,
+            'retention' => 'run-retained',
+            'access_classification' => 'internal',
+        ], $overrides));
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    public static function artifactManifest(): array
+    {
+        return [
+            self::artifactProduced('evt-artifact-commit', 2, 'artifact-commit-1', 'commit', 'git:sha/0d9d7be', 'text/plain', 40, 'sha1:0d9d7be'),
+            self::artifactProduced('evt-artifact-diff', 3, 'artifact-diff-1', 'diff', 'git:diff/0d9d7be..ac14f11', 'text/x-diff', 420, 'sha256:diff420'),
+            self::artifactProduced('evt-artifact-log', 4, 'artifact-log-1', 'bounded_log', 'store://logs/run-1/chunk-1', 'text/plain', 512, 'sha256:log512'),
+            self::artifactProduced('evt-artifact-test', 5, 'artifact-test-1', 'test_result', 'store://tests/run-1/phpunit.xml', 'application/xml', 801, 'sha256:test801'),
+            self::artifactProduced('evt-artifact-shot', 6, 'artifact-shot-1', 'screenshot', 'store://shots/run-1/fail.png', 'image/png', 2213, 'sha256:shot2213', ['access_classification' => 'restricted']),
+            self::artifactProduced('evt-artifact-url', 7, 'artifact-url-1', 'external_url', 'https://deploy.example.test/releases/42', 'text/uri-list', 1, 'remote:etag:release-42', ['access_classification' => 'public']),
+        ];
+    }
+
+    /** @return array<string, mixed> */
     public static function forgedRun(): array
     {
         $event = self::started('evt-forged', 2);

@@ -35,7 +35,8 @@ final readonly class ProviderExecutionEventReceiver
             ],
         );
 
-        $next = $log->appendEnvelopeAndEvent($envelope, $event, $identity);
+        $attachment = $this->attachmentFor($envelope, $normalization['type'], $normalization['payload']);
+        $next = $log->appendEnvelopeAndEvent($envelope, $event, $identity, $attachment);
 
         if ($next->terminalSequence !== null && $envelope->sequence > $next->terminalSequence) {
             return new ProviderExecutionEventReceipt(ProviderExecutionEventStatus::Late, $next, $event);
@@ -88,26 +89,12 @@ final readonly class ProviderExecutionEventReceiver
             $payload['provider_event_type'] = $envelope->providerEventType;
         }
 
-        $reference = $this->referenceFor($type, $payload);
+        $reference = $this->referenceFor($type, $payload, $envelope);
         if ($reference !== null) {
             $payload['reference'] = $reference->toArray();
         }
 
         return ['type' => $type, 'payload' => $payload, 'unknown' => $unknown];
-    }
-
-    /** @param array<string, mixed> $payload */
-    private function referenceFor(ExecutionEventType $type, array $payload): ?ExecutionEventReference
-    {
-        return match ($type) {
-            ExecutionEventType::ToolInvoked, ExecutionEventType::ToolCompleted => $this->toolReference($payload),
-            ExecutionEventType::CommandExecuted => $this->commandReference($payload),
-            ExecutionEventType::FileChanged => $this->fileReference($payload),
-            ExecutionEventType::TestStarted, ExecutionEventType::TestCompleted => $this->testReference($payload),
-            ExecutionEventType::InputRequested => $this->inputReference($payload),
-            ExecutionEventType::ArtifactProduced => $this->artifactReference($payload),
-            default => null,
-        };
     }
 
     /** @param array<string, mixed> $payload */
@@ -166,32 +153,115 @@ final readonly class ProviderExecutionEventReceiver
     }
 
     /** @param array<string, mixed> $payload */
-    private function artifactReference(array $payload): ?ExecutionEventReference
+    private function artifactReference(ProviderExecutionEventEnvelope $envelope, array $payload): ?ExecutionEventReference
     {
         $id = $payload['id'] ?? null;
-        $kind = $payload['kind'] ?? null;
-        $path = $payload['path'] ?? null;
+        $type = $payload['type'] ?? $payload['kind'] ?? null;
+        $locator = $payload['locator'] ?? $payload['path'] ?? $payload['url'] ?? null;
         $mediaType = $payload['media_type'] ?? $payload['mediaType'] ?? null;
         $size = $payload['size'] ?? null;
-        $hash = $payload['hash'] ?? null;
-        if (! is_string($id) || ! is_string($kind) || ! is_string($path) || ! is_string($mediaType) || ! is_int($size) || ! is_string($hash)) {
+        $integrity = $payload['integrity'] ?? $payload['hash'] ?? null;
+        if (! is_string($id) || ! is_string($type) || ! is_string($locator) || ! is_string($mediaType) || ! is_int($size) || ! is_string($integrity)) {
             return null;
         }
 
-        return new class(new ArtifactReference($id, $kind, $path, $mediaType, $size, $hash)) implements ExecutionEventReference {
-            public function __construct(private readonly ArtifactReference $artifact) {}
-            public function toArray(): array
-            {
-                return [
-                    'kind' => 'artifact',
-                    'id' => $this->artifact->id,
-                    'artifact_kind' => $this->artifact->kind,
-                    'path' => $this->artifact->path,
-                    'media_type' => $this->artifact->mediaType,
-                    'size' => $this->artifact->size,
-                    'hash' => $this->artifact->hash,
-                ];
-            }
+        $classification = $this->classification($payload['access_classification'] ?? null);
+        $retention = is_string($payload['retention'] ?? null) ? (string) $payload['retention'] : 'run-retained';
+        $derivedFrom = is_string($payload['derived_from_artifact_id'] ?? null) ? (string) $payload['derived_from_artifact_id'] : null;
+        $supersedes = is_string($payload['supersedes_artifact_id'] ?? null) ? (string) $payload['supersedes_artifact_id'] : null;
+
+        return new ArtifactReference(
+            id: $id,
+            runId: $envelope->runId,
+            type: $type,
+            locator: $locator,
+            mediaType: $mediaType,
+            size: $size,
+            integrity: $integrity,
+            accessClassification: $classification,
+            retention: $retention,
+            derivedFromArtifactId: $derivedFrom,
+            supersedesArtifactId: $supersedes,
+        );
+    }
+
+    /** @param array<string, mixed> $payload */
+    private function referenceFor(ExecutionEventType $type, array $payload, ProviderExecutionEventEnvelope $envelope): ?ExecutionEventReference
+    {
+        return match ($type) {
+            ExecutionEventType::ToolInvoked, ExecutionEventType::ToolCompleted => $this->toolReference($payload),
+            ExecutionEventType::CommandExecuted => $this->commandReference($payload),
+            ExecutionEventType::FileChanged => $this->fileReference($payload),
+            ExecutionEventType::TestStarted, ExecutionEventType::TestCompleted => $this->testReference($payload),
+            ExecutionEventType::InputRequested => $this->inputReference($payload),
+            ExecutionEventType::ArtifactProduced => $this->artifactReference($envelope, $payload),
+            default => null,
+        };
+    }
+
+    private function attachmentFor(ProviderExecutionEventEnvelope $envelope, ExecutionEventType $type, array $payload): ?RunArtifactAttachment
+    {
+        if ($type !== ExecutionEventType::ArtifactProduced) {
+            return null;
+        }
+
+        $reference = $this->artifactReference($envelope, $payload);
+        if (! $reference instanceof ArtifactReference) {
+            return null;
+        }
+
+        $status = $this->attachmentStatus($payload);
+        $observedIntegrity = is_string($payload['observed_integrity'] ?? null)
+            ? (string) $payload['observed_integrity']
+            : (is_string($payload['observed_hash'] ?? null) ? (string) $payload['observed_hash'] : null);
+        $storageFailure = is_string($payload['storage_failure'] ?? null)
+            ? (string) $payload['storage_failure']
+            : (is_string($payload['storage_error'] ?? null) ? (string) $payload['storage_error'] : null);
+
+        return new RunArtifactAttachment(
+            artifact: $reference,
+            producingEvent: new ArtifactProducingEventReference(
+                runId: $envelope->runId,
+                providerExecutionId: $envelope->providerExecutionId->canonical(),
+                providerEventId: $envelope->eventId,
+                sequence: $envelope->sequence,
+                stableIdentity: $envelope->stableIdentity(),
+                normalizedType: ExecutionEventType::ArtifactProduced->value,
+            ),
+            attachedAt: $envelope->occurredAt,
+            status: $status,
+            observedIntegrity: $observedIntegrity,
+            storageFailure: $storageFailure,
+        );
+    }
+
+    /** @param array<string, mixed> $payload */
+    private function attachmentStatus(array $payload): RunArtifactAttachmentStatus
+    {
+        $storageStatus = strtolower(trim((string) ($payload['storage_status'] ?? 'available')));
+        if ($storageStatus === 'missing' || $storageStatus === 'unavailable' || $storageStatus === 'failed') {
+            return RunArtifactAttachmentStatus::StorageMissing;
+        }
+
+        $integrityStatus = strtolower(trim((string) ($payload['integrity_status'] ?? 'verified')));
+        if ($integrityStatus === 'hash_mismatch' || $integrityStatus === 'mismatch') {
+            return RunArtifactAttachmentStatus::HashMismatch;
+        }
+
+        return RunArtifactAttachmentStatus::Attached;
+    }
+
+    private function classification(mixed $raw): ArtifactAccessClassification
+    {
+        if (! is_string($raw)) {
+            return ArtifactAccessClassification::Internal;
+        }
+
+        return match (strtolower(trim($raw))) {
+            ArtifactAccessClassification::Public->value => ArtifactAccessClassification::Public,
+            ArtifactAccessClassification::Restricted->value => ArtifactAccessClassification::Restricted,
+            ArtifactAccessClassification::Secret->value => ArtifactAccessClassification::Secret,
+            default => ArtifactAccessClassification::Internal,
         };
     }
 }

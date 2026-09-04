@@ -13,6 +13,7 @@ This package now models provider execution-event ingestion as a provider-neutral
   - late events after a terminal disposition
 - Guard run/task/attempt/invocation/provider-execution association to detect forged events.
 - Attach typed references for tool, command, file, test, artifact, and input events.
+- Persist durable Run artifact attachments keyed by artifact identity and producing event reference.
 - Provide presentation-neutral timeline projection (`ExecutionTimelineReadModel`).
 - Project Run disposition from normalized terminal events.
 - Feed normalized `test_completed`, `tool_completed`, and `command_executed` events into
@@ -45,3 +46,11 @@ This package now models provider execution-event ingestion as a provider-neutral
 - Provider auth and replay protections on real transport.
 - UI/view rendering from provider events.
 - Cloud/local runner ticket branches parked in the MME epic.
+
+## Artifact attachment semantics
+
+- `artifact.produced` events map into `ArtifactReference` + `RunArtifactAttachment`.
+- Artifact attachment is idempotent by artifact identity when metadata is identical.
+- Reusing an artifact identity with different immutable metadata is rejected; corrections must use a new artifact id and `supersedes_artifact_id`.
+- `storage_status=missing|unavailable|failed` records `storage_missing`.
+- `integrity_status=hash_mismatch|mismatch` records `hash_mismatch` with observed integrity evidence.
