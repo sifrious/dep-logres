@@ -208,6 +208,10 @@ Consumers depend on `HarnessInterface`. `AbstractHarness` is optional shared inv
 - `ExecutionEventType`
 - `ExecutionEventReference`
 - `ArtifactReference`
+- `ArtifactAccessClassification`
+- `ArtifactProducingEventReference`
+- `RunArtifactAttachmentStatus`
+- `RunArtifactAttachment`
 - `ToolInvocationReference`
 - `CommandExecutionReference`
 - `FileChangeReference`

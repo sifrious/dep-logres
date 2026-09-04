@@ -8,8 +8,10 @@ use DateTimeImmutable;
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Sifrious\Logres\ArtifactAccessClassification;
 use Sifrious\Logres\ArtifactReference;
 use Sifrious\Logres\ExecutionEvent;
+use Sifrious\Logres\RunId;
 
 final class ExecutionRecordTest extends TestCase
 {
@@ -45,19 +47,22 @@ final class ExecutionRecordTest extends TestCase
     public function an_artifact_retains_verification_facts(): void
     {
         $artifact = new ArtifactReference(
-            'artifact-01',
-            'report',
-            'artifacts/report.json',
-            'application/json',
-            418,
-            'sha256:123456',
+            id: 'artifact-01',
+            runId: new RunId('run:invocation-001'),
+            type: 'test_result',
+            locator: 'artifacts/report.json',
+            mediaType: 'application/json',
+            size: 418,
+            integrity: 'sha256:123456',
+            accessClassification: ArtifactAccessClassification::Internal,
         );
 
         self::assertSame('artifact-01', $artifact->id);
-        self::assertSame('report', $artifact->kind);
-        self::assertSame('artifacts/report.json', $artifact->path);
+        self::assertSame('run:invocation-001', $artifact->runId->value);
+        self::assertSame('test_result', $artifact->type);
+        self::assertSame('artifacts/report.json', $artifact->locator);
         self::assertSame('application/json', $artifact->mediaType);
         self::assertSame(418, $artifact->size);
-        self::assertSame('sha256:123456', $artifact->hash);
+        self::assertSame('sha256:123456', $artifact->integrity);
     }
 }

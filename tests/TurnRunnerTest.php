@@ -10,6 +10,7 @@ use PHPUnit\Framework\TestCase;
 use Sifrious\Logres\AbstractHarness;
 use Sifrious\Logres\AfterTurnHandler;
 use Sifrious\Logres\AfterTurnPipeline;
+use Sifrious\Logres\ArtifactAccessClassification;
 use Sifrious\Logres\ArtifactReference;
 use Sifrious\Logres\BeforeTurnHandler;
 use Sifrious\Logres\BeforeTurnPipeline;
@@ -29,6 +30,7 @@ use Sifrious\Logres\InvariantFinalizationPhase;
 use Sifrious\Logres\RequiredVerificationOutcome;
 use Sifrious\Logres\RunRequest;
 use Sifrious\Logres\RunResult;
+use Sifrious\Logres\RunId;
 use Sifrious\Logres\Turn;
 use Sifrious\Logres\TurnContext;
 use Sifrious\Logres\TurnRunner;
@@ -273,7 +275,16 @@ final class SequencedHarness extends AbstractHarness
 
         $observer->stdout('complete');
         $observer->stderr('diagnostic');
-        $observer->artifact(new ArtifactReference('artifact-1', 'fixture', 'artifact.txt', 'text/plain', 8, 'sha256:fixture'));
+        $observer->artifact(new ArtifactReference(
+            id: 'artifact-1',
+            runId: new RunId('run:fixture'),
+            type: 'bounded_log',
+            locator: 'artifact.txt',
+            mediaType: 'text/plain',
+            size: 8,
+            integrity: 'sha256:fixture',
+            accessClassification: ArtifactAccessClassification::Internal,
+        ));
         $this->sequence->events[] = 'status:succeeded';
 
         return HarnessStatus::terminal(RunResult::succeeded('complete'));
