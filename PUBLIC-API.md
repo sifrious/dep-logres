@@ -205,7 +205,20 @@ Consumers depend on `HarnessInterface`. `AbstractHarness` is optional shared inv
 
 - `ExecutionObserver`
 - `ExecutionEvent`
+- `ExecutionEventType`
+- `ExecutionEventReference`
 - `ArtifactReference`
+- `ToolInvocationReference`
+- `CommandExecutionReference`
+- `FileChangeReference`
+- `TestExecutionReference`
+- `InputRequestReference`
+- `ProviderExecutionEventEnvelope`
+- `ProviderExecutionEventStatus`
+- `ProviderExecutionEventReceipt`
+- `ProviderExecutionEventLog`
+- `ProviderExecutionEventReceiver`
+- `ExecutionTimelineReadModel`
 
 ## Lifecycle composition
 

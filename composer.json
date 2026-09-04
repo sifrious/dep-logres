@@ -17,6 +17,10 @@
     },
     "repositories": [
         {
+            "type": "path",
+            "url": "contracts/stacks-contract"
+        },
+        {
             "name": "harness-contract-fixtures",
             "type": "vcs",
             "url": "https://github.com/sifrious/dep-harness-contract-fixtures.git"
@@ -27,11 +31,7 @@
         },
         {
             "type": "vcs",
-            "url": "git@github.com-sifrious:sifrious/dep-reference-contract.git"
-        },
-        {
-            "type": "vcs",
-            "url": "https://github.com/sifrious/stacks-contract.git"
+            "url": "https://github.com/sifrious/dep-reference-contract.git"
         }
     ],
     "autoload": {
