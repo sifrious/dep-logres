@@ -248,6 +248,16 @@ Consumers depend on `HarnessInterface`. `AbstractHarness` is optional shared inv
 
 ## Lifecycle composition
 
+- `LoopCheckpointType`
+- `LoopCheckpoint`
+- `LoopHandoffType`
+- `LoopHandoffReference`
+- `LoopExternalWorkReference`
+- `LoopInterventionReference`
+- `LoopTaskComposition`
+- `LoopDisposition`
+- `LoopDetermination`
+- `LoopComposition`
 - `InvariantPreflightPhase`
 - `InvariantBeforeTurnHandler`
 - `InvariantPreflight`

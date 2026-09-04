@@ -55,6 +55,14 @@ Logres defines provider-neutral runner identity, platform, availability, workloa
 
 Application-owned instructions and planning context cross the runner unchanged in `ExecutionEnvelope::requestPayload`. Logres does not interpret that policy. See [docs/execution-payload.md](docs/execution-payload.md).
 
+## Loop composition
+
+`LoopComposition` joins existing deliberation decisions, plans, tasks, handoff
+references, external work mappings, Runs, normalized results, verification, and
+evidence into one provider-neutral domain value. It is a projection, not a new
+database identity or lifecycle, and it contains no MCP representation. See
+[docs/loop-composition.md](docs/loop-composition.md).
+
 ## License
 
 Copyright © 2026 Sifrious. All rights reserved. This is publicly viewable
