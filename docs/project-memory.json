@@ -10,8 +10,7 @@
         {"id": "F-005", "statement": "TaskPrompt compilation freezes canonical JSON bytes containing the complete declared execution envelope and identifies them with SHA-256 hashes."},
         {"id": "F-006", "statement": "Execution target selection produces an immutable snapshot from provider observations and explicit task requirements before dispatch."},
         {"id": "F-007", "statement": "A local Run identity and immutable request, task, prompt, target, policy, and actor provenance exist before provider dispatch."},
-        {"id": "F-008", "statement": "A Run cannot enter dispatch without a current explicit grant whose repository, workspace, path, environment, runtime, permissions, actor, and target match immutable provenance."},
-        {"id": "F-009", "statement": "Human-input questions, delivery evidence, authorized responses, timeout or cancellation resolution, and audit history are persisted inside current ExecutionState."}
+        {"id": "F-008", "statement": "A Run cannot enter dispatch without a current explicit grant whose repository, workspace, path, environment, runtime, permissions, actor, and target match immutable provenance."}
     ],
     "assumptions": [
         {"id": "A-001", "statement": "Version-one attachment references use artifact: and upload: namespaces supplied by host adapters."},
@@ -34,8 +33,7 @@
         {"id": "D-009", "decision": "The local Run identity is created before network dispatch and remains authoritative after provider acknowledgement.", "rationale": "Network uncertainty must not create or replace the logical execution identity."},
         {"id": "D-010", "decision": "Provider identity binding is idempotent for an exact duplicate and conflicting for any different or cross-Run identity.", "rationale": "The first verified binding must remain stable and auditable."},
         {"id": "D-011", "decision": "Target capability and execution authority are separate contracts.", "rationale": "The ability to perform an operation cannot imply permission to perform it for a caller, repository, or workspace."},
-        {"id": "D-012", "decision": "Dispatch authorization freezes one explicit context on the Run before provider invocation.", "rationale": "Ambient directories, default environments, stale observations, and mutable grants must not change dispatch meaning."},
-        {"id": "D-013", "decision": "A human gate releases active lease authority and resumes the same step and Attempt after one authorized shaped response.", "rationale": "A browser disconnect or process restart must not lose the question, repeat completed work, or silently turn a pause into a retry."}
+        {"id": "D-012", "decision": "Dispatch authorization freezes one explicit context on the Run before provider invocation.", "rationale": "Ambient directories, default environments, stale observations, and mutable grants must not change dispatch meaning."}
     ],
     "constraints": [
         "Logres does not depend on Laravel, Eloquent, HTTP, queues, Blade, or a concrete process.",
@@ -79,8 +77,7 @@
         {"id": "MME-7", "name": "Immutable per-task prompts", "stage": "MVP", "status": "implemented"},
         {"id": "MME-8", "name": "Explicit execution target selection", "stage": "MVP", "status": "package_implemented_host_integration_pending"},
         {"id": "MME-1553", "name": "Stable Run identity and provider acknowledgement", "stage": "MVP", "status": "package_implemented_host_integration_pending"},
-        {"id": "MME-1557", "name": "Target, repository, and workspace safety", "stage": "MVP", "status": "package_implemented_host_integration_pending"},
-        {"id": "MME-1299", "name": "Durable human gates and resumable NeedsInput state", "stage": "MVP", "status": "package_implemented_host_integration_pending"}
+        {"id": "MME-1557", "name": "Target, repository, and workspace safety", "stage": "MVP", "status": "package_implemented_host_integration_pending"}
     ],
     "workflows": [
         {"id": "W-001", "name": "Submit execution request", "states": ["mapped", "validated", "rejected_or_persisting", "accepted_or_persistence_failed"]},
@@ -88,8 +85,7 @@
         {"id": "W-003", "name": "Compile task prompt", "states": ["inputs_resolved", "canonicalized", "existing_version_returned_or_new_version_frozen", "persisted", "disclosed"]},
         {"id": "W-004", "name": "Select execution target", "states": ["requirements_declared", "provider_facts_observed", "filtered_by_context_capability_health_and_authority", "selected_or_rejected", "persisted_before_dispatch"]},
         {"id": "W-005", "name": "Bind provider execution identity", "states": ["not_dispatched", "awaiting_acknowledgement", "acknowledged_or_acknowledgement_uncertain", "conflicting_acknowledgement_or_reconciliation_required", "acknowledged"]},
-        {"id": "W-006", "name": "Authorize dispatch", "states": ["run_and_grant_loaded", "repository_and_workspace_observed", "policy_allowed_or_denied", "approved_context_frozen", "awaiting_acknowledgement"]},
-        {"id": "W-007", "name": "Resolve human input", "states": ["one_stable_question_persisted", "delivered_or_redelivered", "authorized_shaped_response_or_timeout_or_cancellation", "same_attempt_and_step_resumed_or_terminal"]}
+        {"id": "W-006", "name": "Authorize dispatch", "states": ["run_and_grant_loaded", "repository_and_workspace_observed", "policy_allowed_or_denied", "approved_context_frozen", "awaiting_acknowledgement"]}
     ],
     "content_opportunities": [
         {"id": "C-001", "format": "post", "user_problem": "Corrections overwrite the request that explains why work began.", "concept": "Model corrections as immutable lineage before asynchronous execution starts.", "technology": "PHP value objects and ports", "project_context": "Logres ExecutionRequest", "audience": "intermediate application developers", "hook": "A corrected request is new evidence, not an edit to old evidence."},

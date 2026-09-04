@@ -9,7 +9,6 @@ enum AttemptStatus: string
     case Ready = 'ready';
     case Leased = 'leased';
     case Running = 'running';
-    case NeedsInput = 'needs_input';
     case Succeeded = 'succeeded';
     case Failed = 'failed';
     case Expired = 'expired';

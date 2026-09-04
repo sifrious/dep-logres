@@ -20,13 +20,8 @@ final class HumanGateTest extends TestCase
         } catch (NeedsInput $gate) {
             self::assertSame([
                 'status' => 'needs_input',
-                'question_id' => 'resume-01',
                 'prompt' => 'Approve transport?',
                 'allowed_responses' => ['stdin', 'argument'],
-                'response_shape' => [
-                    'type' => 'string',
-                    'enum' => ['stdin', 'argument'],
-                ],
                 'resume_token' => 'resume-01',
             ], $gate->payload());
         }

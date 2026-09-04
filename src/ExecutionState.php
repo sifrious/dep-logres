@@ -25,8 +25,6 @@ final readonly class ExecutionState
         public ?ExecutionStateDetails $details = null,
         public ?RecoveryRecord $recovery = null,
         public ?CancellationIntent $cancellation = null,
-        /** @var list<HumanInputRecord> */
-        public array $humanInputs = [],
     ) {
         if ($version < 0) {
             throw new InvalidArgumentException('Execution-state version cannot be negative.');
@@ -38,13 +36,6 @@ final readonly class ExecutionState
             if ($attempt->runId->value !== $runId->value) {
                 throw new InvalidArgumentException('Every Attempt must belong to this Run.');
             }
-        }
-        $outstanding = array_filter($humanInputs, static fn (HumanInputRecord $input): bool => $input->isOutstanding());
-        if (count($outstanding) > 1) {
-            throw new InvalidArgumentException('A Run cannot have more than one outstanding human-input question.');
-        }
-        if ($outstanding !== [] && $status !== RunStatus::NeedsInput) {
-            throw new InvalidArgumentException('An outstanding human-input question requires needs_input Run state.');
         }
     }
 
@@ -118,111 +109,6 @@ final readonly class ExecutionState
         $next = new ExecutionAttempt($attempt->id, $attempt->runId, $attempt->number, AttemptStatus::Running, $attempt->createdAt, $attempt->previousAttemptId, $attempt->leases, $now);
 
         return $this->replaceAttempt($next)->copy(status: RunStatus::Running, startedAt: $this->startedAt ?? $now);
-    }
-
-    public function requestInput(HumanInputQuestion $question, ?LeaseToken $token = null): self
-    {
-        foreach ($this->humanInputs as $input) {
-            if ($input->question->id !== $question->id) {
-                continue;
-            }
-            if ($input->isOutstanding() && $input->question == $question) {
-                return $this;
-            }
-            $this->reject(ExecutionStateRejectionReason::InputQuestionConflict, 'A human-input question identity cannot be reused or changed.');
-        }
-        if ($this->outstandingInput() !== null) {
-            $this->reject(ExecutionStateRejectionReason::InputAlreadyPending, 'The Run already has an outstanding human-input question.');
-        }
-        if (! in_array($this->status, [RunStatus::Preparing, RunStatus::Running], true)) {
-            $this->reject(ExecutionStateRejectionReason::InvalidTransition, 'Human input can only be requested while preparing or running.');
-        }
-
-        $attempt = $this->requireCurrentAttempt($question->attemptId);
-        $leases = $attempt->leases;
-        if ($lease = $attempt->activeLease()) {
-            if ($token === null || ! hash_equals($lease->token->value, $token->value)) {
-                $this->reject(ExecutionStateRejectionReason::ForeignLease, 'Pausing an active Attempt requires its Lease token.');
-            }
-            $released = $lease->release($lease->holder, $lease->token, 'input:'.$question->id, $question->requestedAt);
-            $leases = array_map(static fn (ExecutionLease $item): ExecutionLease => $item->id->value === $released->id->value ? $released : $item, $leases);
-        }
-        if (! in_array($attempt->status, [AttemptStatus::Ready, AttemptStatus::Leased, AttemptStatus::Running], true)) {
-            $this->reject(ExecutionStateRejectionReason::InvalidTransition, 'The current Attempt cannot pause for human input.');
-        }
-
-        RunTransitionPolicy::assertAllowed($this->status, RunStatus::NeedsInput);
-        $waiting = new ExecutionAttempt($attempt->id, $attempt->runId, $attempt->number, AttemptStatus::NeedsInput, $attempt->createdAt, $attempt->previousAttemptId, $leases, $attempt->startedAt);
-
-        return $this->replaceAttempt($waiting)->copy(
-            status: RunStatus::NeedsInput,
-            humanInputs: [...$this->humanInputs, HumanInputRecord::open($question)],
-        );
-    }
-
-    public function recordInputDelivery(string $questionId, string $deliveryId, string $channel, DateTimeImmutable $deliveredAt): self
-    {
-        $input = $this->requireOutstandingInput($questionId);
-        $delivered = $input->deliver($deliveryId, $channel, $deliveredAt);
-
-        return $delivered === $input ? $this : $this->replaceHumanInput($delivered);
-    }
-
-    public function respondToInput(HumanInputResponse $response, HumanInputAuthorization $authorization): self
-    {
-        if (! $authorization->allowed) {
-            $this->reject(ExecutionStateRejectionReason::InputResponseUnauthorized, $authorization->reason);
-        }
-        foreach ($this->humanInputs as $input) {
-            if ($input->response?->id !== $response->id) {
-                continue;
-            }
-            if ($input->response == $response) {
-                return $this;
-            }
-            $this->reject(ExecutionStateRejectionReason::InputQuestionConflict, 'A human-input response identity cannot be reused with different evidence.');
-        }
-
-        $input = $this->requireOutstandingInput($response->questionId);
-        if ($input->question->expiresAt !== null && $response->respondedAt >= $input->question->expiresAt) {
-            $this->reject(ExecutionStateRejectionReason::InputExpired, 'The human-input question has expired.');
-        }
-        if (! in_array($response->value, $input->question->allowedResponses, true)) {
-            $this->reject(ExecutionStateRejectionReason::InputResponseInvalid, 'The response does not match the question response shape.');
-        }
-        $attempt = $this->requireCurrentAttempt($input->question->attemptId);
-        if ($attempt->status !== AttemptStatus::NeedsInput || $this->status !== RunStatus::NeedsInput) {
-            $this->reject(ExecutionStateRejectionReason::InputNotPending, 'The Run is not waiting for this human-input response.');
-        }
-
-        RunTransitionPolicy::assertAllowed($this->status, RunStatus::Preparing);
-        $ready = new ExecutionAttempt($attempt->id, $attempt->runId, $attempt->number, AttemptStatus::Ready, $attempt->createdAt, $attempt->previousAttemptId, $attempt->leases, $attempt->startedAt);
-
-        return $this->replaceAttempt($ready)
-            ->replaceHumanInput($input->answer($response))
-            ->copy(status: RunStatus::Preparing);
-    }
-
-    public function timeoutInput(string $questionId, string $operationId, DateTimeImmutable $now): self
-    {
-        foreach ($this->humanInputs as $input) {
-            foreach ($input->events as $event) {
-                if ($event->operationId === $operationId && $event->type === HumanInputResolution::TimedOut->value) {
-                    return $this;
-                }
-            }
-        }
-        $input = $this->requireOutstandingInput($questionId);
-        if ($input->question->expiresAt === null || $now < $input->question->expiresAt) {
-            $this->reject(ExecutionStateRejectionReason::InputNotExpired, 'The human-input question has not expired.');
-        }
-        $attempt = $this->requireCurrentAttempt($input->question->attemptId);
-        RunTransitionPolicy::assertAllowed($this->status, RunStatus::TimedOut);
-        $timedOut = new ExecutionAttempt($attempt->id, $attempt->runId, $attempt->number, AttemptStatus::TimedOut, $attempt->createdAt, $attempt->previousAttemptId, $attempt->leases, $attempt->startedAt, $now, 'human input timed out');
-
-        return $this->replaceAttempt($timedOut)
-            ->replaceHumanInput($input->close($operationId, HumanInputResolution::TimedOut, $now))
-            ->copy(status: RunStatus::TimedOut, finishedAt: $now, activeAttemptId: null, failureReason: 'human input timed out');
     }
 
     public function renewLease(AttemptId $attemptId, ExecutionNodeRef $holder, LeaseToken $token, string $renewalId, DateTimeImmutable $now, int $ttlSeconds): self
@@ -370,7 +256,7 @@ final readonly class ExecutionState
         }
         $intent = new CancellationIntent($operationId, $kind, $requestedBy, $reason, CancellationStatus::Requested, $now);
 
-        if ($this->status === RunStatus::Pending || $this->status === RunStatus::NeedsInput || $this->activeAttemptId === null || ($this->status === RunStatus::Preparing && $this->startedAt === null)) {
+        if ($this->status === RunStatus::Pending || $this->activeAttemptId === null || ($this->status === RunStatus::Preparing && $this->startedAt === null)) {
             return $this->cancelBeforeDispatch($intent, $now);
         }
 
@@ -496,41 +382,8 @@ final readonly class ExecutionState
             $replacement = new ExecutionAttempt($attempt->id, $attempt->runId, $attempt->number, $attemptStatus, $attempt->createdAt, $attempt->previousAttemptId, $leases, $attempt->startedAt, $now, $intent->reason);
             $attempts = array_map(static fn (ExecutionAttempt $item): ExecutionAttempt => $item->id->value === $replacement->id->value ? $replacement : $item, $attempts);
         }
-        $humanInputs = $this->humanInputs;
-        if ($input = $this->outstandingInput()) {
-            $closed = $input->close($intent->operationId, HumanInputResolution::Cancelled, $now, $intent->requestedBy);
-            $humanInputs = array_map(static fn (HumanInputRecord $item): HumanInputRecord => $item->question->id === $closed->question->id ? $closed : $item, $humanInputs);
-        }
         RunTransitionPolicy::assertAllowed($this->status, $runStatus);
-        return $this->copy(status: $runStatus, finishedAt: $now, activeAttemptId: null, attempts: $attempts, failureReason: $intent->reason, cancellation: $intent->confirm($now, null), humanInputs: $humanInputs);
-    }
-
-    private function outstandingInput(): ?HumanInputRecord
-    {
-        foreach (array_reverse($this->humanInputs) as $input) {
-            if ($input->isOutstanding()) {
-                return $input;
-            }
-        }
-        return null;
-    }
-
-    private function requireOutstandingInput(string $questionId): HumanInputRecord
-    {
-        $input = $this->outstandingInput();
-        if ($input === null || $input->question->id !== $questionId) {
-            return $this->reject(ExecutionStateRejectionReason::InputNotPending, 'The Run is not waiting for this human-input question.');
-        }
-        return $input;
-    }
-
-    private function replaceHumanInput(HumanInputRecord $replacement): self
-    {
-        $humanInputs = array_map(
-            static fn (HumanInputRecord $input): HumanInputRecord => $input->question->id === $replacement->question->id ? $replacement : $input,
-            $this->humanInputs,
-        );
-        return $this->copy(humanInputs: $humanInputs);
+        return $this->copy(status: $runStatus, finishedAt: $now, activeAttemptId: null, attempts: $attempts, failureReason: $intent->reason, cancellation: $intent->confirm($now, null));
     }
 
     private function requireAuthorizedActiveLease(ExecutionAttempt $attempt, LeaseToken $token, DateTimeImmutable $now): ExecutionLease
@@ -574,9 +427,9 @@ final readonly class ExecutionState
     }
 
     /** @param list<ExecutionAttempt>|null $attempts */
-    private function copy(?RunStatus $status = null, ?DateTimeImmutable $scheduledAt = null, ?DateTimeImmutable $startedAt = null, ?DateTimeImmutable $finishedAt = null, AttemptId|false|null $activeAttemptId = false, ?array $attempts = null, ?string $failureReason = null, ?string $terminalResultReference = null, ?ExecutionStateDetails $details = null, ?RecoveryRecord $recovery = null, ?CancellationIntent $cancellation = null, ?array $humanInputs = null): self
+    private function copy(?RunStatus $status = null, ?DateTimeImmutable $scheduledAt = null, ?DateTimeImmutable $startedAt = null, ?DateTimeImmutable $finishedAt = null, AttemptId|false|null $activeAttemptId = false, ?array $attempts = null, ?string $failureReason = null, ?string $terminalResultReference = null, ?ExecutionStateDetails $details = null, ?RecoveryRecord $recovery = null, ?CancellationIntent $cancellation = null): self
     {
-        return new self($this->runId, $status ?? $this->status, $this->createdAt, $scheduledAt ?? $this->scheduledAt, $startedAt ?? $this->startedAt, $finishedAt ?? $this->finishedAt, $activeAttemptId === false ? $this->activeAttemptId : $activeAttemptId, $attempts ?? $this->attempts, $failureReason ?? $this->failureReason, $terminalResultReference ?? $this->terminalResultReference, $this->version + 1, $details ?? $this->details, $recovery ?? $this->recovery, $cancellation ?? $this->cancellation, $humanInputs ?? $this->humanInputs);
+        return new self($this->runId, $status ?? $this->status, $this->createdAt, $scheduledAt ?? $this->scheduledAt, $startedAt ?? $this->startedAt, $finishedAt ?? $this->finishedAt, $activeAttemptId === false ? $this->activeAttemptId : $activeAttemptId, $attempts ?? $this->attempts, $failureReason ?? $this->failureReason, $terminalResultReference ?? $this->terminalResultReference, $this->version + 1, $details ?? $this->details, $recovery ?? $this->recovery, $cancellation ?? $this->cancellation);
     }
 
     /** @return never */

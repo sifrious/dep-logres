@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Sifrious\Logres;
 
-use DateTimeImmutable;
 use InvalidArgumentException;
 use RuntimeException;
 
@@ -35,27 +34,9 @@ final class NeedsInput extends RuntimeException
     {
         return [
             'status' => RunStatus::NeedsInput->value,
-            'question_id' => $this->resumeToken,
             'prompt' => $this->prompt,
             'allowed_responses' => $this->allowedResponses,
-            'response_shape' => [
-                'type' => 'string',
-                'enum' => $this->allowedResponses,
-            ],
             'resume_token' => $this->resumeToken,
         ];
-    }
-
-    public function toQuestion(AttemptId $attemptId, string $stepId, DateTimeImmutable $requestedAt, ?DateTimeImmutable $expiresAt = null): HumanInputQuestion
-    {
-        return new HumanInputQuestion(
-            $this->resumeToken,
-            $attemptId,
-            $stepId,
-            $this->prompt,
-            $this->allowedResponses,
-            $requestedAt,
-            $expiresAt,
-        );
     }
 }

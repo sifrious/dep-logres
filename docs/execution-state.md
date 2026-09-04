@@ -66,22 +66,6 @@ Cancellation requires an explicit `CancellationAuthorization`. Before dispatch i
 
 Request and confirmation replay converge by operation identity. Reusing an identity for different intent rejects with `cancellation_conflict`. A lost provider acknowledgement leaves the requested intent visible and reconcilable rather than pretending cancellation completed. Terminal Runs cannot accept a new cancellation or retry.
 
-## Human input
-
-`NeedsInput` is a durable Run state, not the lifetime of an exception, request, browser tab, or websocket. `HumanGate` remains the synchronous signal that orchestration may catch; `NeedsInput::toQuestion` turns that signal into the package command input. Orchestration under MME-1007 is responsible for catching and submitting the command. Logres owns the resulting transitions:
-
-1. `requestInput` accepts one stable question identity tied to the current Attempt and opaque step identity. It releases active lease authority and moves both Run and Attempt to `needs_input`.
-2. The question publishes an explicit string-enum `response_shape`. Policy under MME-1010 chooses the allowed values and optional expiry; Logres validates the supplied shape and enforces it.
-3. Exactly one question may remain outstanding. Exact request replay converges; changing or reusing an identity rejects.
-4. `recordInputDelivery` appends delivery evidence. A repeated delivery operation converges, while new delivery identities preserve every redelivery. Reading or losing a browser connection performs no transition, so the question remains discoverable after reconnect or process restart.
-5. `respondToInput` requires a host-supplied `HumanInputAuthorization`, matching question identity, unexpired response, and allowed value. An accepted response is idempotent by response identity and records responder, value, and time.
-6. Acceptance returns the same Attempt to `ready` and the Run to `preparing`. It does not create a retry Attempt: Run, Attempt number, predecessor, and step identity remain unchanged. A new bounded Lease may then resume that exact step.
-7. `timeoutInput` is legal only at or after the policy-supplied expiry and terminates distinctly as `timed_out`. Cancellation while waiting terminates as `cancelled`. Both close the question and preserve its audit record.
-
-`ExecutionStateReadModel::humanInputs` exposes current and prior questions, explicit response shape, resolution, accepted response, and ordered request/delivery/answer/timeout/cancellation audit evidence. Host persistence must serialize the complete collection and use the existing `ExecutionStateStore` compare-and-swap version when submitting concurrent deliveries or answers.
-
-This package does not own UI or handoff representation (MME-1496), browser sessions, notification transport, timers, actor authentication, authorization policy, response-limit policy, or runner orchestration.
-
 ## Adapter boundary
 
 Logres guarantees identities, state invariants, transition legality, structured rejection reasons, idempotent mutation semantics, non-secret read models, lineage, and optimistic-concurrency semantics. A host must durably serialize the full aggregate, enforce unique Run identity, implement atomic compare-and-swap on `version`, generate unpredictable lease tokens and unique command identities, provide a trusted clock, and schedule expiry observation. Database locks, unique constraints, HTTP, queues, provider SDKs, and framework models remain host adapters.
