@@ -36,17 +36,6 @@ final readonly class ExecutionRunner
             return RunnerExecutionOutcome::rejected(RunnerRejectionReason::Malformed, $error->getMessage());
         }
 
-        $key = RunnerLocalRecord::key($envelope);
-        $existing = $this->localState->find($key);
-        if ($existing?->terminalResult !== null) {
-            return RunnerExecutionOutcome::completed($existing->terminalResult);
-        }
-        if ($existing !== null && in_array($existing->stage, [RunnerLocalStage::Accepted, RunnerLocalStage::Invoking, RunnerLocalStage::Reporting], true)) {
-            return $this->reject($envelope, RunnerRejectionReason::DuplicateOrAlreadyProcessed, 'This immutable execution was already accepted locally.', $now);
-        }
-
-        $this->localState->save(new RunnerLocalRecord($key, $envelope->idempotencyIdentity, RunnerLocalStage::Received, $now));
-
         if (! in_array($envelope->protocolVersion, $this->runner->capabilities->protocolVersions, true)) {
             return $this->reject($envelope, RunnerRejectionReason::UnsupportedProtocolVersion, 'The envelope protocol version is not supported.', $now);
         }
@@ -80,11 +69,26 @@ final readonly class ExecutionRunner
             return $this->reject($envelope, RunnerRejectionReason::InvalidLifecycleState, 'Canonical Logres lifecycle state does not permit invocation.', $now);
         }
 
-        $this->localState->save(new RunnerLocalRecord($key, $envelope->idempotencyIdentity, RunnerLocalStage::Accepted, $now));
+        $key = RunnerLocalRecord::key($envelope);
+        $fingerprint = RunnerLocalRecord::fingerprint($envelope);
+        $reservation = $this->localState->reserve(new RunnerLocalRecord($key, $envelope->idempotencyIdentity, $fingerprint, RunnerLocalStage::Received, $now));
+        if (! $reservation->acquired) {
+            if ($reservation->record->idempotencyIdentity !== $envelope->idempotencyIdentity
+                || ! hash_equals($reservation->record->envelopeFingerprint, $fingerprint)) {
+                return $this->reject($envelope, RunnerRejectionReason::IdempotencyConflict, 'The execution key or idempotency identity is already bound to different immutable work.', $now);
+            }
+            if ($reservation->record->terminalResult !== null) {
+                return RunnerExecutionOutcome::completed($reservation->record->terminalResult);
+            }
+
+            return $this->reject($envelope, RunnerRejectionReason::DuplicateOrAlreadyProcessed, 'This logical invocation was already accepted locally.', $now);
+        }
+
+        $this->localState->save(new RunnerLocalRecord($key, $envelope->idempotencyIdentity, $fingerprint, RunnerLocalStage::Accepted, $now));
         $observer = new SequencedRunnerObserver($envelope, $this->runner->identity, $this->events, $this->lifecycle, $now);
         $observer->event(RunnerEventType::Accepted);
         $observer->event(RunnerEventType::Starting);
-        $this->localState->save(new RunnerLocalRecord($key, $envelope->idempotencyIdentity, RunnerLocalStage::Invoking, $now));
+        $this->localState->save(new RunnerLocalRecord($key, $envelope->idempotencyIdentity, $fingerprint, RunnerLocalStage::Invoking, $now));
         $observer->event(RunnerEventType::Running);
 
         try {
@@ -100,9 +104,9 @@ final readonly class ExecutionRunner
             $runtimeResult->status, $envelope->runtime, $envelope->runtimeAdapter, $envelope->workspaceIdentity,
             $now, $finishedAt, $runtimeResult->exitCode, failureCategory: $runtimeResult->failureCategory, failureDetail: $runtimeResult->failureDetail,
         );
-        $this->localState->save(new RunnerLocalRecord($key, $envelope->idempotencyIdentity, RunnerLocalStage::Reporting, $finishedAt, $terminal));
+        $this->localState->save(new RunnerLocalRecord($key, $envelope->idempotencyIdentity, $fingerprint, RunnerLocalStage::Reporting, $finishedAt, $terminal));
         $observer->event(RunnerEventType::TerminalResult, ['status' => $terminal->status->value, 'exit_code' => $terminal->exitCode]);
-        $this->localState->save(new RunnerLocalRecord($key, $envelope->idempotencyIdentity, RunnerLocalStage::Terminal, $finishedAt, $terminal));
+        $this->localState->save(new RunnerLocalRecord($key, $envelope->idempotencyIdentity, $fingerprint, RunnerLocalStage::Terminal, $finishedAt, $terminal));
 
         return RunnerExecutionOutcome::completed($terminal);
     }

@@ -29,6 +29,7 @@ use Sifrious\Logres\RunnerEventType;
 use Sifrious\Logres\RunnerIdentity;
 use Sifrious\Logres\RunnerLifecycle;
 use Sifrious\Logres\RunnerLocalRecord;
+use Sifrious\Logres\RunnerLocalReservation;
 use Sifrious\Logres\RunnerLocalStage;
 use Sifrious\Logres\RunnerLocalStateStore;
 use Sifrious\Logres\RunnerRejectionReason;
@@ -119,11 +120,43 @@ final class RunnerConformanceTest extends TestCase
         self::assertSame(1, $runtime->calls);
         self::assertSame($first->terminalResult, $second->terminalResult);
 
-        $envelope = ExecutionEnvelope::parse(array_replace($this->envelope(), ['run_id' => 'run:restart', 'attempt_id' => 'attempt:restart', 'lease_id' => 'lease:restart']));
-        $state->save(new RunnerLocalRecord(RunnerLocalRecord::key($envelope), $envelope->idempotencyIdentity, RunnerLocalStage::Invoking, $this->now()));
-        $restarted = $runner->execute(array_replace($this->envelope(), ['run_id' => 'run:restart', 'attempt_id' => 'attempt:restart', 'lease_id' => 'lease:restart']), $this->now());
+        $restart = ['run_id' => 'run:restart', 'attempt_id' => 'attempt:restart', 'lease_id' => 'lease:restart', 'idempotency_identity' => 'dispatch:restart'];
+        $envelope = ExecutionEnvelope::parse(array_replace($this->envelope(), $restart));
+        $state->save(new RunnerLocalRecord(RunnerLocalRecord::key($envelope), $envelope->idempotencyIdentity, RunnerLocalRecord::fingerprint($envelope), RunnerLocalStage::Invoking, $this->now()));
+        $restarted = $runner->execute(array_replace($this->envelope(), $restart), $this->now());
         self::assertSame(RunnerRejectionReason::DuplicateOrAlreadyProcessed, $restarted->acceptance->reason);
         self::assertSame(1, $runtime->calls);
+    }
+
+    #[Test]
+    public function idempotency_identity_prevents_duplicate_invocation_under_a_changed_lease(): void
+    {
+        [$runner, $runtime] = $this->runner();
+        $first = $runner->execute($this->envelope(), $this->now());
+        $redelivery = $runner->execute(array_replace($this->envelope(), [
+            'lease_id' => 'lease:replacement',
+            'lease_token' => 'lease-replacement-secret',
+        ]), $this->now());
+
+        self::assertSame(1, $runtime->calls);
+        self::assertSame($first->terminalResult, $redelivery->terminalResult);
+    }
+
+    #[Test]
+    public function idempotency_identity_rejects_different_immutable_work(): void
+    {
+        [$runner, $runtime] = $this->runner();
+        $runner->execute($this->envelope(), $this->now());
+        $conflict = $runner->execute(array_replace($this->envelope(), [
+            'run_id' => 'run:different',
+            'attempt_id' => 'attempt:different',
+            'lease_id' => 'lease:different',
+            'request_payload' => ['prompt' => 'different work'],
+        ]), $this->now());
+
+        self::assertSame(1, $runtime->calls);
+        self::assertSame(RunnerRejectionReason::IdempotencyConflict, $conflict->acceptance->reason);
+        self::assertNull($conflict->terminalResult?->exitCode);
     }
 
     #[Test]
@@ -187,7 +220,19 @@ final class RunnerConformanceTest extends TestCase
         };
         $state = new class implements RunnerLocalStateStore {
             /** @var array<string, RunnerLocalRecord> */ public array $records = [];
+            /** @var array<string, string> */ public array $idempotency = [];
             public function find(string $executionKey): ?RunnerLocalRecord { return $this->records[$executionKey] ?? null; }
+            public function reserve(RunnerLocalRecord $record): RunnerLocalReservation
+            {
+                $existingKey = $this->idempotency[$record->idempotencyIdentity] ?? null;
+                $existing = $this->records[$record->executionKey] ?? ($existingKey === null ? null : $this->records[$existingKey]);
+                if ($existing !== null) {
+                    return new RunnerLocalReservation(false, $existing);
+                }
+                $this->records[$record->executionKey] = $record;
+                $this->idempotency[$record->idempotencyIdentity] = $record->executionKey;
+                return new RunnerLocalReservation(true, $record);
+            }
             public function save(RunnerLocalRecord $record): void { $this->records[$record->executionKey] = $record; }
         };
         $events = new class implements RunnerEventSink {

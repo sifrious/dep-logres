@@ -102,6 +102,15 @@ The package is pre-release. These names define the current consumer surface; sem
 - `ProviderLookupStatus`
 - `ProviderExecutionLookupResult`
 - `ProviderExecutionLookup`
+- `ProviderInvocationRequest`
+- `ProviderInvocationStatus`
+- `ProviderDispatch`
+- `ProviderDispatchResult`
+- `ProviderInvocationRecord`
+- `ProviderInvocationReservation`
+- `ProviderInvocationPersistence`
+- `ProviderInvocationOutcome`
+- `ProviderInvocationCoordinator`
 - `Turn`
 - `TurnContext`
 - `EnvironmentSnapshot`
@@ -174,6 +183,7 @@ The package is pre-release. These names define the current consumer surface; sem
 - `RunnerTerminalResult`
 - `RunnerLocalStage`
 - `RunnerLocalRecord`
+- `RunnerLocalReservation`
 - `RunnerLocalStateStore`
 - `RunnerExecutionOutcome`
 - `SequencedRunnerObserver`

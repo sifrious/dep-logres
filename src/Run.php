@@ -85,6 +85,15 @@ final readonly class Run
         return new self($this->id, $this->provenance, ProviderBindingStatus::AcknowledgementUncertain, dispatchedAt: $this->dispatchedAt, identityIssue: $reason, dispatchAuthorization: $this->dispatchAuthorization);
     }
 
+    public function dispatchFailed(string $reason): self
+    {
+        if ($this->providerBindingStatus !== ProviderBindingStatus::AwaitingAcknowledgement || trim($reason) === '') {
+            throw new InvalidArgumentException('Only an awaiting Run can record an explicit dispatch failure.');
+        }
+
+        return new self($this->id, $this->provenance, ProviderBindingStatus::DispatchFailed, dispatchedAt: $this->dispatchedAt, identityIssue: $reason, dispatchAuthorization: $this->dispatchAuthorization);
+    }
+
     public function acknowledged(ProviderExecutionId $providerExecutionId, string $acknowledgedAt): self
     {
         if (! in_array($this->providerBindingStatus, [ProviderBindingStatus::AwaitingAcknowledgement, ProviderBindingStatus::AcknowledgementUncertain], true)) {
@@ -117,6 +126,7 @@ final readonly class Run
             ProviderBindingStatus::AwaitingAcknowledgement => $this->dispatchAuthorization !== null && $this->providerExecutionId === null && $timestamp($this->dispatchedAt) && $this->acknowledgedAt === null && $this->identityIssue === null,
             ProviderBindingStatus::Acknowledged => $this->dispatchAuthorization !== null && $this->providerExecutionId !== null && $timestamp($this->dispatchedAt) && $timestamp($this->acknowledgedAt) && $this->identityIssue === null,
             ProviderBindingStatus::AcknowledgementUncertain, ProviderBindingStatus::ReconciliationRequired => $this->dispatchAuthorization !== null && $this->providerExecutionId === null && $timestamp($this->dispatchedAt) && $this->acknowledgedAt === null && trim((string) $this->identityIssue) !== '',
+            ProviderBindingStatus::DispatchFailed => $this->dispatchAuthorization !== null && $this->providerExecutionId === null && $timestamp($this->dispatchedAt) && $this->acknowledgedAt === null && trim((string) $this->identityIssue) !== '',
             ProviderBindingStatus::ConflictingAcknowledgement => ($this->dispatchedAt === null || ($this->dispatchAuthorization !== null && $timestamp($this->dispatchedAt))) && trim((string) $this->identityIssue) !== '',
         };
 

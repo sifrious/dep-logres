@@ -17,5 +17,6 @@ enum RunnerRejectionReason: string
     case RuntimeUnavailable = 'runtime_unavailable';
     case CapabilityMismatch = 'capability_mismatch';
     case DuplicateOrAlreadyProcessed = 'duplicate_or_already_processed';
+    case IdempotencyConflict = 'idempotency_conflict';
     case InvalidLifecycleState = 'invalid_lifecycle_state';
 }
