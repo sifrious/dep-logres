@@ -97,8 +97,8 @@ final readonly class AgentStepLoop
             || $determination->attemptId->value !== $attempt->id->value
             || $determination->sequence !== $expectedSequence
             || $determination->expectedStateVersion !== $state->version
-            || $determination->policyName !== $policy->name
-            || $determination->policyVersion !== $policy->version) {
+            || $determination->policyDetermination->policyName !== $policy->name
+            || $determination->policyDetermination->policyVersion !== $policy->version) {
             throw new InvalidArgumentException('Agent Step determination does not match durable state, history, or policy.');
         }
     }

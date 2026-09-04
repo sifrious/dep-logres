@@ -22,11 +22,7 @@ final readonly class AgentStepDetermination
         public int $expectedStateVersion,
         public DateTimeImmutable $observedAt,
         public string $rationale,
-        public string $policyName,
-        public string $policyVersion,
-        public LoopPolicyOutcome $policyOutcome,
-        public LoopPolicyClause $policyClause,
-        public LoopBudgetRemaining $remainingBudget,
+        public LoopPolicyDetermination $policyDetermination,
         public array $inputFacts = [],
         public array $evidence = [],
         public ?DateTimeImmutable $reenterAt = null,
@@ -34,8 +30,8 @@ final readonly class AgentStepDetermination
         if ($sequence < 1 || $expectedStateVersion < 0) {
             throw new InvalidArgumentException('Agent Step sequence and expected state version must be valid.');
         }
-        if (trim($rationale) === '' || trim($policyName) === '' || trim($policyVersion) === '') {
-            throw new InvalidArgumentException('Agent Step determination requires rationale and versioned policy identity.');
+        if (trim($rationale) === '') {
+            throw new InvalidArgumentException('Agent Step determination requires a rationale.');
         }
         if ($stepId->value !== AgentStepId::forSequence($runId, $attemptId, $sequence)->value) {
             throw new InvalidArgumentException('Agent Step identity must match its Run, Attempt, and sequence.');
@@ -66,11 +62,7 @@ final readonly class AgentStepDetermination
             $this->expectedStateVersion,
             $this->observedAt->format(DATE_ATOM),
             $this->rationale,
-            $this->policyName,
-            $this->policyVersion,
-            $this->policyOutcome->value,
-            $this->policyClause->value,
-            $this->remainingBudget->toArray(),
+            $this->policyDetermination->toArray(),
             $this->inputFacts,
             array_map(static fn (EvidenceReference $reference): array => [
                 'kind' => $reference->kind,
