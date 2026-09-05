@@ -45,3 +45,13 @@ PAYS WHEN: multiple installed skills and invariant checks compose in declared or
 CHARGES WHEN: handlers gain infrastructure access, ordering becomes implicit, or the pipelines become a second dependency-injection container.
 
 TRIGGER: two fixture handlers in each lifecycle phase must run once in exact order around the same TurnRunner acceptance path.
+
+## `LoopComposition` — 2026-09-04, MME-2273
+
+SEAM: authored composition boundary — a side-effect-free provider-neutral value joins existing deliberation, plan, task, handoff, external work, Run, result, verification, and evidence objects without replacing their owners.
+
+PAYS WHEN: native PHP and later MCP/application adapters can inspect the same causal Loop, make evidence-gated determinations, and re-enter the owning task without inventing identity or lifecycle state.
+
+CHARGES WHEN: the projection starts mutating package aggregates, serializing MCP resources, invoking providers, authoring clarification, or persisting a generic Loop record; those are explicit removal/refactoring triggers.
+
+TRIGGER: MME-2273 requires zero-, one-, and multi-ticket planner-to-validation paths to share one replay-safe domain composition before MME-2272 defines its MCP representation.
