@@ -7,6 +7,7 @@ namespace Sifrious\Logres\Tests;
 use DateTimeImmutable;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Sifrious\Logres\Tests\Fixtures\ExecutionRequestFixtures;
 use Sifrious\Logres\CapabilitySnapshot;
 use Sifrious\Logres\CurrentWorkload;
 use Sifrious\Logres\EnvelopeAuthenticator;
@@ -295,6 +296,13 @@ final class OutboundRunnerLoopTest extends TestCase
             'authentication_material' => 'signed',
             'required_capabilities' => ['agent'],
             'request_payload' => ['prompt' => 'ok'],
+            'stacks_context' => ExecutionRequestFixtures::executionIdentity(
+                'workspace:test',
+                '/work/test',
+                repositoryId: 'repository:example.test/repo',
+                target: 'target:local:test',
+                checkoutId: 'checkout:test',
+            )->toArray(),
         ];
     }
 

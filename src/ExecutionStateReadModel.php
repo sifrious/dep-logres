@@ -21,6 +21,7 @@ final readonly class ExecutionStateReadModel
         public ?array $details,
         public ?array $recovery,
         public ?array $cancellation,
+        public array $executionIdentity,
     ) {}
 
     public static function fromState(ExecutionState $state): self
@@ -79,6 +80,8 @@ final readonly class ExecutionStateReadModel
                 'confirmed_at' => $state->cancellation->confirmedAt?->format(DATE_ATOM),
                 'partial_result_reference' => $state->cancellation->partialResultReference,
             ],
+            $state->executionIdentity?->toArray()
+                ?? ExecutionProvenanceClassification::missingRecord(),
         );
     }
 
@@ -94,6 +97,8 @@ final readonly class ExecutionStateReadModel
             'started_at' => $attempt->startedAt?->format(DATE_ATOM),
             'finished_at' => $attempt->finishedAt?->format(DATE_ATOM),
             'failure_reason' => $attempt->failureReason,
+            'execution_identity' => $attempt->executionIdentity?->toArray()
+                ?? ExecutionProvenanceClassification::missingRecord(),
             'leases' => array_map(static fn (ExecutionLease $lease): array => [
                 'id' => $lease->id->value,
                 'attempt_id' => $lease->attemptId->value,
@@ -103,6 +108,8 @@ final readonly class ExecutionStateReadModel
                 'expires_at' => $lease->expiresAt->format(DATE_ATOM),
                 'renewed_at' => $lease->renewedAt?->format(DATE_ATOM),
                 'released_at' => $lease->releasedAt?->format(DATE_ATOM),
+                'execution_identity' => $lease->executionIdentity?->toArray()
+                    ?? ExecutionProvenanceClassification::missingRecord(),
             ], $attempt->leases),
         ];
     }

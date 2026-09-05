@@ -17,6 +17,9 @@ use Sifrious\Logres\RepositoryIdentity;
 use Sifrious\Logres\TaskPromptCompiler;
 use Sifrious\Logres\WorkspaceAuthority;
 use Sifrious\Logres\WorkspacePath;
+use Sifrious\Logres\StacksExecutionContext;
+use Sifrious\StacksContract\ExecutionProvenance;
+use Sifrious\StacksContract\WorkspaceReference;
 
 final class RunIdentityFixtures
 {
@@ -67,6 +70,7 @@ final class RunIdentityFixtures
                 ],
                 initiatingActor: 'user:mary',
                 createdAt: self::CREATED_AT,
+                executionIdentity: self::executionIdentity(),
             ),
         );
     }
@@ -104,6 +108,41 @@ final class RunIdentityFixtures
             providerExecutionId: new ProviderExecutionId('orbs', $id),
             targetId: ExecutionTargetFixtures::candidate()->id,
             receivedAt: self::ACKNOWLEDGED_AT,
+        );
+    }
+
+    public static function executionIdentity(): StacksExecutionContext
+    {
+        $workspace = new WorkspaceReference(
+            'workspace:personal',
+            'repository:atlas',
+            'github.com/sifrious/atlas',
+            'worktree:atlas:personal',
+            'worktree',
+            'available',
+            '/workspace/atlas',
+            'main',
+            str_repeat('a', 40),
+        );
+
+        return StacksExecutionContext::capture(
+            $workspace,
+            new ExecutionProvenance(
+                'workspace:personal',
+                'repository:atlas',
+                'github.com/sifrious/atlas',
+                'worktree:atlas:personal',
+                'worktree',
+                '/workspace/atlas',
+                str_repeat('a', 40),
+                'main',
+                'git@github.com:sifrious/atlas.git',
+                '2026-08-28T05:39:00+00:00',
+            ),
+            str_repeat('a', 40),
+            'git-worktree:worktree:atlas:personal',
+            'capability-snapshot:'.str_repeat('c', 64),
+            'target:orbs:orb-a',
         );
     }
 }

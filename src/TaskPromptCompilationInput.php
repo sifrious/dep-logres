@@ -71,6 +71,8 @@ final readonly class TaskPromptCompilationInput
                 'readiness_conditions' => $this->task->readinessConditions,
                 'status' => $this->task->status->value,
                 'target' => $this->task->target,
+                'execution_identity' => $this->task->executionIdentity?->toArray()
+                    ?? ExecutionProvenanceClassification::missingRecord(),
             ],
             'tools' => array_map(static fn (TaskPromptTool $tool): array => $tool->canonicalData(), $this->tools),
         ];

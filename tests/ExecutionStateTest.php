@@ -23,6 +23,7 @@ use Sifrious\Logres\LeaseToken;
 use Sifrious\Logres\RunId;
 use Sifrious\Logres\RunStatus;
 use Sifrious\Logres\Tests\Fixtures\InMemoryExecutionStateStore;
+use Sifrious\Logres\Tests\Fixtures\RunIdentityFixtures;
 
 final class ExecutionStateTest extends TestCase
 {
@@ -124,7 +125,7 @@ final class ExecutionStateTest extends TestCase
             runtimeInvocationId: 'runtime:789',
             targetReference: 'target:mac:1',
         );
-        $state = ExecutionState::create(new RunId('run:details'), $this->at(0), $details)
+        $state = ExecutionState::create(new RunId('run:details'), $this->at(0), RunIdentityFixtures::executionIdentity(), $details)
             ->recordApproval('user:approver', $this->at(1))
             ->recordExecutionResult(3, 'https://github.com/sifrious/dep-logres/pull/3', ['files' => 20], '/evidence/output.log', $this->at(2));
         $read = ExecutionStateReadModel::fromState($state);
@@ -142,7 +143,7 @@ final class ExecutionStateTest extends TestCase
 
     private function readyState(): ExecutionState
     {
-        return ExecutionState::create(new RunId('run:1'), $this->at(0))->scheduleAttempt(new AttemptId('attempt:1'), $this->at(0));
+        return ExecutionState::create(new RunId('run:1'), $this->at(0), RunIdentityFixtures::executionIdentity())->scheduleAttempt(new AttemptId('attempt:1'), $this->at(0));
     }
 
     private function storedReadyState(): array

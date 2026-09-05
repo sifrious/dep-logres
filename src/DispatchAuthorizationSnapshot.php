@@ -25,6 +25,7 @@ final readonly class DispatchAuthorizationSnapshot
         public string $grantIssuedAt,
         public string $grantExpiresAt,
         public string $authorizedAt,
+        public string $executionIdentityFingerprint,
     ) {
         if (preg_match('/^grant:[a-zA-Z0-9._-]+$/', $grantId) !== 1
             || $permissions === []
@@ -33,6 +34,7 @@ final readonly class DispatchAuthorizationSnapshot
             || trim($runtime) === ''
             || trim($actor) === ''
             || trim($policyVersion) === ''
+            || preg_match('/^[a-f0-9]{64}$/', $executionIdentityFingerprint) !== 1
             || $workspacePath->value === '/'
             || ! self::timestamp($grantIssuedAt)
             || ! self::timestamp($grantExpiresAt)

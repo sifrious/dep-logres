@@ -23,6 +23,7 @@ final readonly class ProviderExecutionEventEnvelope
         public string $providerEventType,
         public array $payload = [],
         public ?string $signature = null,
+        public ?StacksExecutionContext $executionIdentity = null,
     ) {
         if (trim($eventId) === '' || trim($invocationId) === '' || trim($providerEventType) === '' || $sequence < 1) {
             throw new InvalidArgumentException('Execution event envelopes require identity, event type, and positive sequence.');
@@ -54,12 +55,15 @@ final readonly class ProviderExecutionEventEnvelope
             providerEventType: (string) $input['event_type'],
             payload: is_array($input['payload'] ?? null) ? $input['payload'] : [],
             signature: isset($input['signature']) ? (string) $input['signature'] : null,
+            executionIdentity: is_array($input['execution_identity'] ?? null)
+                ? StacksExecutionContext::fromArray($input['execution_identity'])
+                : null,
         );
     }
 
     public function stableIdentity(): string
     {
-        return $this->providerExecutionId->canonical().'#'.$this->eventId;
+        return $this->providerExecutionId->canonical().'#'.$this->eventId.'#'.($this->executionIdentity?->canonicalIdentity() ?? 'legacy-missing');
     }
 
     /** @return array<string, mixed> */
@@ -78,6 +82,8 @@ final readonly class ProviderExecutionEventEnvelope
             'event_type' => $this->providerEventType,
             'payload' => $this->payload,
             'signature' => $this->signature,
+            'execution_identity' => $this->executionIdentity?->toArray()
+                ?? ExecutionProvenanceClassification::missingRecord(),
         ];
     }
 }

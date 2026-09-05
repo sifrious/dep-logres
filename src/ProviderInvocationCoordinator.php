@@ -170,7 +170,8 @@ final readonly class ProviderInvocationCoordinator
             || $run->provenance->promptId->value !== $request->prompt->id->value
             || $run->provenance->promptVersion !== $request->prompt->version
             || $run->provenance->promptCompilerVersion !== $request->prompt->compilerVersion
-            || $run->provenance->promptProvenanceHash !== $request->prompt->provenanceHash) {
+            || $run->provenance->promptProvenanceHash !== $request->prompt->provenanceHash
+            || $run->provenance->executionIdentity?->dispatchEvidenceFingerprint() !== $request->executionIdentity?->dispatchEvidenceFingerprint()) {
             throw new InvalidArgumentException('Provider invocation must match immutable Run provenance.');
         }
     }

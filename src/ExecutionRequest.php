@@ -23,6 +23,7 @@ final readonly class ExecutionRequest
         public RequestRelationship $relationship = RequestRelationship::Original,
         public ?ExecutionRequestId $parentRequestId = null,
         public ?DeliberationOrigin $origin = null,
+        public ?StacksExecutionContext $executionIdentity = null,
     ) {
         $this->attachments = array_values($attachments);
     }

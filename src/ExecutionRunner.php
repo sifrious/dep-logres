@@ -51,6 +51,9 @@ final readonly class ExecutionRunner
         if (! $this->authorization->authorizes($envelope)) {
             return $this->reject($envelope, RunnerRejectionReason::Unauthorized, 'The authorization grant does not authorize this execution.', $now);
         }
+        if ($envelope->stacksContext === null || ! $envelope->stacksContext->isDispatchable()) {
+            return $this->reject($envelope, RunnerRejectionReason::WorkspaceProvenanceMissing, 'New execution cannot dispatch without complete canonical Stacks provenance.', $now);
+        }
         if (! $this->workspace->isAvailable($envelope->workspaceIdentity)) {
             return $this->reject($envelope, RunnerRejectionReason::WorkspaceUnavailable, 'The addressed workspace is unavailable on this runner.', $now);
         }
@@ -99,13 +102,23 @@ final readonly class ExecutionRunner
         }
 
         $finishedAt = $now;
+        $resultIdentity = $envelope->stacksContext;
+        if ($runtimeResult->resultingRevision !== null && $runtimeResult->diffIdentity !== null) {
+            $resultIdentity = $resultIdentity->withResult($runtimeResult->resultingRevision, $runtimeResult->diffIdentity);
+        }
         $terminal = new RunnerTerminalResult(
             $envelope->runId, $envelope->attemptId, $envelope->leaseId, $this->runner->identity,
             $runtimeResult->status, $envelope->runtime, $envelope->runtimeAdapter, $envelope->workspaceIdentity,
             $now, $finishedAt, $runtimeResult->exitCode, failureCategory: $runtimeResult->failureCategory, failureDetail: $runtimeResult->failureDetail,
+            executionIdentity: $resultIdentity,
         );
         $this->localState->save(new RunnerLocalRecord($key, $envelope->idempotencyIdentity, $fingerprint, RunnerLocalStage::Reporting, $finishedAt, $terminal));
-        $observer->event(RunnerEventType::TerminalResult, ['status' => $terminal->status->value, 'exit_code' => $terminal->exitCode]);
+        $observer->event(RunnerEventType::TerminalResult, [
+            'status' => $terminal->status->value,
+            'exit_code' => $terminal->exitCode,
+            'resulting_revision' => $runtimeResult->resultingRevision,
+            'diff_identity' => $runtimeResult->diffIdentity,
+        ]);
 
         return RunnerExecutionOutcome::completed($terminal);
     }
@@ -116,6 +129,7 @@ final readonly class ExecutionRunner
             $envelope->runId, $envelope->attemptId, $envelope->leaseId, $this->runner->identity,
             RunnerTerminalStatus::Rejected, $envelope->runtime, $envelope->runtimeAdapter, $envelope->workspaceIdentity,
             $now, $now, failureCategory: $reason->value, failureDetail: $detail,
+            executionIdentity: $envelope->stacksContext,
         );
         return RunnerExecutionOutcome::rejected($reason, $detail, $terminal);
     }

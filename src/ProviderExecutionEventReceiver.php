@@ -33,6 +33,7 @@ final readonly class ProviderExecutionEventReceiver
                 'provider_event_type' => $envelope->providerEventType,
                 'signature' => $envelope->signature,
             ],
+            executionIdentity: $envelope->executionIdentity,
         );
 
         $attachment = $this->attachmentFor($envelope, $normalization['type'], $normalization['payload']);
@@ -182,6 +183,7 @@ final readonly class ProviderExecutionEventReceiver
             retention: $retention,
             derivedFromArtifactId: $derivedFrom,
             supersedesArtifactId: $supersedes,
+            executionIdentity: $envelope->executionIdentity,
         );
     }
 

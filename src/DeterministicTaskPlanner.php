@@ -44,6 +44,7 @@ final readonly class DeterministicTaskPlanner implements TaskPlanner
                 mayRequireHumanInput: false,
                 target: $target,
                 agent: 'codex',
+                executionIdentity: $request->executionIdentity,
             ),
             new TranslatedTask(
                 id: $id('define'),
@@ -57,6 +58,7 @@ final readonly class DeterministicTaskPlanner implements TaskPlanner
                 mayRequireHumanInput: true,
                 target: $target,
                 agent: 'codex',
+                executionIdentity: $request->executionIdentity,
             ),
             new TranslatedTask(
                 id: $id('implement'),
@@ -70,6 +72,7 @@ final readonly class DeterministicTaskPlanner implements TaskPlanner
                 mayRequireHumanInput: false,
                 target: $target,
                 agent: 'codex',
+                executionIdentity: $request->executionIdentity,
             ),
             new TranslatedTask(
                 id: $id('verify'),
@@ -83,6 +86,7 @@ final readonly class DeterministicTaskPlanner implements TaskPlanner
                 mayRequireHumanInput: false,
                 target: $target,
                 agent: 'codex',
+                executionIdentity: $request->executionIdentity,
             ),
         ];
         $plan = new TaskPlan(new TaskPlanId("plan:{$suffix}:v{$version}"), $request->id, $tasks, $replansFrom);

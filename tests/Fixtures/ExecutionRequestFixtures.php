@@ -15,7 +15,10 @@ use Sifrious\Logres\ExecutionContext;
 use Sifrious\Logres\ExecutionPermissions;
 use Sifrious\Logres\ExecutionRequest;
 use Sifrious\Logres\ExecutionRequestId;
+use Sifrious\Logres\StacksExecutionContext;
 use Sifrious\ReferenceContract\CrossPackageReference;
+use Sifrious\StacksContract\ExecutionProvenance;
+use Sifrious\StacksContract\WorkspaceReference;
 
 final class ExecutionRequestFixtures
 {
@@ -31,6 +34,7 @@ final class ExecutionRequestFixtures
             permissions: new ExecutionPermissions(true, true, false),
             authorization: self::authorization(),
             channel: DeliveryChannel::Web,
+            executionIdentity: self::executionIdentity(),
         );
     }
 
@@ -54,6 +58,48 @@ final class ExecutionRequestFixtures
         return new AuthorizationContext(
             new ActorContext(new CrossPackageReference('sifrious/zahir', 'account', 'fixture-user'), ActorKind::Human),
             TenantScope::forTenant('organization', new CrossPackageReference('sifrious/zahir', 'organization', 'tenant-a')),
+        );
+    }
+
+    public static function executionIdentity(
+        string $workspaceId = 'ws_00000000000000000000000000000001',
+        string $path = '/workspace/atlas-api',
+        string $revision = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+        string $repositoryId = 'repository:atlas-api',
+        string $target = 'target:orbs:orb-a',
+        ?string $checkoutId = null,
+    ): StacksExecutionContext {
+        $checkoutId ??= $workspaceId;
+        $workspace = new WorkspaceReference(
+            $workspaceId,
+            $repositoryId,
+            'github.com/sifrious/atlas-api',
+            $checkoutId,
+            'worktree',
+            'available',
+            $path,
+            'main',
+            $revision,
+        );
+
+        return StacksExecutionContext::capture(
+            $workspace,
+            new ExecutionProvenance(
+                $workspaceId,
+                $repositoryId,
+                'github.com/sifrious/atlas-api',
+                $checkoutId,
+                'worktree',
+                $path,
+                $revision,
+                'main',
+                'git@github.com:sifrious/atlas-api.git',
+                '2026-08-28T05:39:00+00:00',
+            ),
+            $revision,
+            'git-worktree:'.$checkoutId,
+            'capability-snapshot:'.str_repeat('c', 64),
+            $target,
         );
     }
 }

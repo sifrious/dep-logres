@@ -24,6 +24,7 @@ final readonly class RunResult
         public ?RequiredVerificationOutcome $requiredVerification = null,
         public VerificationStatus $verificationStatus = VerificationStatus::Incomplete,
         public FinalizationStatus $finalizationStatus = FinalizationStatus::Incomplete,
+        public ?StacksExecutionContext $executionIdentity = null,
     ) {
         if (! $this->status->isTerminal()) {
             throw new InvalidArgumentException('A run result requires a terminal status.');
@@ -76,6 +77,25 @@ final readonly class RunResult
         return new self(RunStatus::ProviderError, stderr: $stderr, reason: $reason);
     }
 
+    public static function fromRunnerTerminal(RunnerTerminalResult $terminal): self
+    {
+        $status = match ($terminal->status) {
+            RunnerTerminalStatus::Success => RunStatus::Succeeded,
+            RunnerTerminalStatus::Failure => RunStatus::Failed,
+            RunnerTerminalStatus::Cancelled => RunStatus::Cancelled,
+            RunnerTerminalStatus::TimedOut => RunStatus::TimedOut,
+            RunnerTerminalStatus::Rejected => RunStatus::ProviderError,
+        };
+
+        return new self(
+            status: $status,
+            stderr: $terminal->failureDetail ?? '',
+            exitCode: $terminal->exitCode,
+            reason: $terminal->failureCategory,
+            executionIdentity: $terminal->executionIdentity,
+        );
+    }
+
     public function withRequiredVerification(RequiredVerificationOutcome $outcome): self
     {
         $status = $this->status;
@@ -101,6 +121,7 @@ final readonly class RunResult
             requiredVerification: $outcome,
             verificationStatus: $this->verificationStatus,
             finalizationStatus: $this->finalizationStatus,
+            executionIdentity: $this->executionIdentity,
         );
     }
 
@@ -126,6 +147,7 @@ final readonly class RunResult
             requiredVerification: $this->requiredVerification,
             verificationStatus: VerificationStatus::Incomplete,
             finalizationStatus: FinalizationStatus::Incomplete,
+            executionIdentity: $this->executionIdentity,
         );
     }
 }

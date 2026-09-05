@@ -49,6 +49,7 @@ final readonly class DirectTaskPlanner implements TaskPlanner
             mayRequireHumanInput: false,
             target: $target,
             agent: 'codex',
+            executionIdentity: $request->executionIdentity,
         );
         $plan = new TaskPlan(
             new TaskPlanId("plan:{$suffix}:v{$version}"),

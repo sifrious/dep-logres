@@ -20,6 +20,7 @@ final readonly class ArtifactReference implements ExecutionEventReference
         public string $retention = 'run-retained',
         public ?string $derivedFromArtifactId = null,
         public ?string $supersedesArtifactId = null,
+        public ?StacksExecutionContext $executionIdentity = null,
     ) {
         if (trim($this->id) === '' || trim($this->type) === '' || trim($this->locator) === '' || trim($this->mediaType) === '' || trim($this->integrity) === '') {
             throw new InvalidArgumentException('Artifact identity, type, run ownership, locator, media type, and integrity are required.');
@@ -61,6 +62,8 @@ final readonly class ArtifactReference implements ExecutionEventReference
             'retention' => $this->retention,
             'derived_from_artifact_id' => $this->derivedFromArtifactId,
             'supersedes_artifact_id' => $this->supersedesArtifactId,
+            'execution_identity' => $this->executionIdentity?->toArray()
+                ?? ExecutionProvenanceClassification::missingRecord(),
         ];
     }
 

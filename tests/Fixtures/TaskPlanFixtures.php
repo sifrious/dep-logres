@@ -62,6 +62,7 @@ final class TaskPlanFixtures
             target: 'repository:atlas-api',
             agent: 'codex',
             status: TaskStatus::Planned,
+            executionIdentity: ExecutionRequestFixtures::executionIdentity(),
         );
     }
 }

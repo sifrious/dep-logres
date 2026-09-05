@@ -22,7 +22,7 @@ final class SequencedRunnerObserver implements RunnerRuntimeObserver
     {
         $sequence = ++$this->sequence;
         $id = hash('sha256', RunnerLocalRecord::key($this->envelope).'|'.$sequence);
-        $this->sink->emit(new RunnerEvent($id, $this->envelope->runId, $this->envelope->attemptId, $this->envelope->leaseId, $this->runnerId, $sequence, $this->startedAt, $type, $payload));
+        $this->sink->emit(new RunnerEvent($id, $this->envelope->runId, $this->envelope->attemptId, $this->envelope->leaseId, $this->runnerId, $sequence, $this->startedAt, $type, $payload, $this->envelope->stacksContext));
     }
 
     public function cancellationRequested(): bool

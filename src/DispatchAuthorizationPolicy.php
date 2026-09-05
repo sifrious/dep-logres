@@ -28,6 +28,7 @@ final readonly class DispatchAuthorizationPolicy
         $target = $run->provenance->targetSelection->target;
         $repository = new RepositoryIdentity($target->repositoryIdentity);
         $workspace = new WorkspaceAuthority($target->workspaceAuthority);
+        $identity = $run->provenance->executionIdentity;
         $authorizedTime = $this->time($authorizedAt, 'authorization_time_invalid', $failures);
         $observedRepository = $this->observedRepository($observedRepositoryIdentities, $failures);
 
@@ -54,11 +55,20 @@ final readonly class DispatchAuthorizationPolicy
         if ($grant->workspaceAuthority->value !== $workspace->value) {
             $failures[] = new DispatchAuthorizationFailure('workspace_unauthorized', 'The grant does not authorize the selected workspace authority.');
         }
+        if ($identity === null || ! $identity->isDispatchable()) {
+            $failures[] = new DispatchAuthorizationFailure('workspace_provenance_missing', 'Dispatch requires complete canonical Stacks workspace and revision provenance.');
+        } elseif ($identity->workspace->workspaceId !== $workspace->value
+            || $identity->workspace->repositoryId !== $repository->value
+            || $identity->selectedExecutionTarget !== $target->id->value) {
+            $failures[] = new DispatchAuthorizationFailure('workspace_provenance_mismatch', 'Stacks workspace, repository, and selected-target provenance must match dispatch authority.');
+        }
 
         if ($requestedPath === null) {
             $failures[] = new DispatchAuthorizationFailure('workspace_path_missing', 'Dispatch requires an explicit normalized workspace path.');
         } elseif (! $grant->workspaceRoot->contains($requestedPath)) {
             $failures[] = new DispatchAuthorizationFailure('workspace_path_escape', 'The requested path escapes the granted workspace root.');
+        } elseif ($identity !== null && $requestedPath->value !== $identity->provenance->executionPath) {
+            $failures[] = new DispatchAuthorizationFailure('workspace_path_mismatch', 'The requested path does not resolve to the selected Stacks workspace observation.');
         }
 
         if (trim($environment) === '' || $environment !== $target->environment || $environment !== $grant->environment) {
@@ -92,6 +102,9 @@ final readonly class DispatchAuthorizationPolicy
         if ($failures !== []) {
             return new DispatchAuthorizationDecision(false, null, $failures);
         }
+        if ($identity === null) {
+            throw new InvalidArgumentException('Complete Stacks execution identity is required after dispatch validation.');
+        }
 
         return new DispatchAuthorizationDecision(
             true,
@@ -109,6 +122,7 @@ final readonly class DispatchAuthorizationPolicy
                 grantIssuedAt: $grant->issuedAt,
                 grantExpiresAt: $grant->expiresAt,
                 authorizedAt: $authorizedAt,
+                executionIdentityFingerprint: $identity->dispatchEvidenceFingerprint(),
             ),
             [],
         );

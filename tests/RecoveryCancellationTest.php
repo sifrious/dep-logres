@@ -25,6 +25,7 @@ use Sifrious\Logres\RetryPolicy;
 use Sifrious\Logres\RunId;
 use Sifrious\Logres\RunStatus;
 use Sifrious\Logres\Tests\Fixtures\InMemoryExecutionStateStore;
+use Sifrious\Logres\Tests\Fixtures\RunIdentityFixtures;
 
 final class RecoveryCancellationTest extends TestCase
 {
@@ -92,7 +93,7 @@ final class RecoveryCancellationTest extends TestCase
     #[Test]
     public function unauthorized_cancellation_is_rejected_and_predispatch_cancellation_is_terminal(): void
     {
-        $pending = ExecutionState::create(new RunId('run:cancel'), $this->at(0));
+        $pending = ExecutionState::create(new RunId('run:cancel'), $this->at(0), RunIdentityFixtures::executionIdentity());
         $this->assertRejected(ExecutionStateRejectionReason::CancellationUnauthorized, fn () => $pending->requestCancellation('cancel:denied', CancellationKind::Manual, 'user:1', 'stop', CancellationAuthorization::deny('actor_not_allowed'), $this->at(1)));
 
         $cancelled = $pending->requestCancellation('cancel:1', CancellationKind::Manual, 'user:1', 'operator stopped work', CancellationAuthorization::allow(), $this->at(1));
@@ -142,7 +143,7 @@ final class RecoveryCancellationTest extends TestCase
 
     private function running(): ExecutionState
     {
-        return ExecutionState::create(new RunId('run:1'), $this->at(0))
+        return ExecutionState::create(new RunId('run:1'), $this->at(0), RunIdentityFixtures::executionIdentity())
             ->scheduleAttempt(new AttemptId('attempt:1'), $this->at(0))
             ->acquireLease(new AttemptId('attempt:1'), new LeaseId('lease:1'), new ExecutionNodeRef('node:1'), new LeaseToken('secret:1'), 'acquire:1', $this->at(1), 60)
             ->start(new AttemptId('attempt:1'), new LeaseToken('secret:1'), $this->at(2));

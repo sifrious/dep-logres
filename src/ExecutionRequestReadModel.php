@@ -20,6 +20,7 @@ final readonly class ExecutionRequestReadModel
         public string $relationship,
         public ?string $parentRequestId,
         public ?array $origin = null,
+        public array $executionIdentity = [],
     ) {}
 
     public static function fromRequest(ExecutionRequest $request): self
@@ -57,6 +58,8 @@ final readonly class ExecutionRequestReadModel
                 'plan' => $request->origin->planReference,
                 'plan_step' => $request->origin->planStepReference,
             ],
+            executionIdentity: $request->executionIdentity?->toArray()
+                ?? ExecutionProvenanceClassification::missingRecord(),
         );
     }
 }

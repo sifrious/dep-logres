@@ -15,6 +15,7 @@ final readonly class RunResultReadModel
         public ?string $reason,
         public string $verificationStatus,
         public string $finalizationStatus,
+        public array $executionIdentity,
     ) {}
 
     public static function fromResult(RunResult $result): self
@@ -39,6 +40,8 @@ final readonly class RunResultReadModel
             reason: $result->reason,
             verificationStatus: $result->verificationStatus->value,
             finalizationStatus: $result->finalizationStatus->value,
+            executionIdentity: $result->executionIdentity?->toArray()
+                ?? ExecutionProvenanceClassification::missingRecord(),
         );
     }
 }

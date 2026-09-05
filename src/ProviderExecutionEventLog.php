@@ -31,6 +31,7 @@ final readonly class ProviderExecutionEventLog
         public array $missingSequenceRanges = [],
         public ?int $terminalSequence = null,
         public array $artifactAttachments = [],
+        public ?StacksExecutionContext $executionIdentity = null,
     ) {
         if (trim($this->invocationId) === '' || trim($this->provider) === '') {
             throw new InvalidArgumentException('Provider event logs require invocation and provider identity.');
@@ -47,6 +48,7 @@ final readonly class ProviderExecutionEventLog
         string $runId,
         string $taskId,
         string $attemptId,
+        ?StacksExecutionContext $executionIdentity = null,
     ): self {
         return new self(
             invocationId: $invocationId,
@@ -55,6 +57,7 @@ final readonly class ProviderExecutionEventLog
             runId: new RunId($runId),
             taskId: new TaskId($taskId),
             attemptId: new AttemptId($attemptId),
+            executionIdentity: $executionIdentity,
         );
     }
 
@@ -75,7 +78,8 @@ final readonly class ProviderExecutionEventLog
             && $this->providerExecutionId->canonical() === $envelope->providerExecutionId->canonical()
             && $this->runId->value === $envelope->runId->value
             && $this->taskId->value === $envelope->taskId->value
-            && $this->attemptId->value === $envelope->attemptId->value;
+            && $this->attemptId->value === $envelope->attemptId->value
+            && $this->executionIdentity?->dispatchEvidenceFingerprint() === $envelope->executionIdentity?->dispatchEvidenceFingerprint();
     }
 
     public function projectedRunStatus(): RunStatus
@@ -126,6 +130,7 @@ final readonly class ProviderExecutionEventLog
             missingSequenceRanges: self::resolveMissingRanges(self::registerMissingRange($this->missingSequenceRanges, $this->highestSequence + 1, $event->sequence - 1), $event->sequence),
             terminalSequence: self::terminalSequence($this->terminalSequence, $event),
             artifactAttachments: $attachments,
+            executionIdentity: $this->executionIdentity,
         );
     }
 
@@ -146,6 +151,7 @@ final readonly class ProviderExecutionEventLog
             missingSequenceRanges: $this->missingSequenceRanges,
             terminalSequence: $this->terminalSequence,
             artifactAttachments: $this->artifactAttachments,
+            executionIdentity: $this->executionIdentity,
         );
     }
 
